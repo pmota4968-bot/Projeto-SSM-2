@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSM - Corporate Medical Emergency Platform</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@700;800;900&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .font-corporate {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .bg-medical-blue {
+            background-color: #0f172a;
+        }
+
+        .text-medical-blue {
+            color: #0f172a;
+        }
+
+        /* Custom Leaflet Marker Styling */
+        .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .marker-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        /* Animação de Sucesso no Despacho */
+        @keyframes dispatch-success {
+            0% {
+                transform: scale(1);
+                border-color: #e2e8f0;
+            }
+
+            50% {
+                transform: scale(1.01);
+                border-color: #10b981;
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+            }
+
+            100% {
+                transform: scale(1);
+                border-color: #10b981;
+            }
+        }
+
+        .animate-dispatch-success {
+            animation: dispatch-success 0.8s ease-out forwards;
+        }
+    </style>
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            const root = document.getElementById('root');
+            if (root) {
+                root.innerHTML = '<div style="padding: 20px; background: #fee2e2; border: 2px solid #ef4444; color: #b91c1c;">' +
+                    '<h1>ERRO CRÍTICO (HTML)</h1>' +
+                    '<p>' + msg + '</p>' +
+                    '<p>Arquivo: ' + url + ':' + line + ':' + col + '</p>' +
+                    '</div>';
+            }
+            return false;
+        };
+    </script>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

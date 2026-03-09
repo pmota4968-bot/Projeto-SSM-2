@@ -208,8 +208,8 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         ) : (
           /* DASHBOARD PADRÃO - HERO CARD ALINHADO COM A FOTO */
           <>
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-12 md:p-16 flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden">
-              <div className="flex-1 space-y-10 relative z-10 text-left">
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 md:p-16 flex flex-col items-start justify-center gap-10 md:gap-12 relative overflow-hidden">
+              <div className="w-full md:pr-80 space-y-10 relative z-10 text-left">
                 <div className="space-y-6">
                   <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight font-corporate">
                     Bem-vindo, <span className="text-blue-600">{companyName}</span>
@@ -219,8 +219,33 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                   </p>
                 </div>
 
+                {/* Emergency Button - Visible here on Mobile, absolutely positioned on Desktop */}
+                <div className="md:absolute md:top-1/2 md:right-16 md:-translate-y-1/2 shrink-0 relative flex justify-center w-full md:w-auto">
+                  <div className={`absolute inset-0 rounded-full blur-[70px] opacity-30 transition-all duration-700 bg-red-600 ${panicStep === 'confirming' ? 'scale-125' : 'scale-100'}`}></div>
+                  <button
+                    onClick={handlePanicClick}
+                    disabled={panicStep === 'activating' || panicStep === 'active' || panicStep === 'waiting_dispatch'}
+                    className={`relative w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-2xl active:scale-95 group ${panicStep === 'confirming' ? 'bg-orange-600 scale-105' :
+                      panicStep === 'active' ? 'bg-emerald-600' :
+                        panicStep === 'activating' ? 'bg-slate-900' :
+                          panicStep === 'waiting_dispatch' ? 'bg-blue-600' :
+                            'bg-red-600 hover:bg-red-700'
+                      }`}
+                  >
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-white/15 rounded-full flex items-center justify-center mb-4 md:mb-6">
+                      <AlertCircle className="w-10 h-10 md:w-12 md:h-12 text-white" />
+                    </div>
+                    <span className="text-2xl md:text-3xl font-black text-white uppercase tracking-[0.1em] font-corporate">
+                      {panicStep === 'confirming' ? 'CONFIRMAR' : 'EMERGÊNCIA'}
+                    </span>
+                    <span className="text-[10px] md:text-[11px] font-bold text-white uppercase tracking-widest mt-2 opacity-80">
+                      CLIQUE PARA ATIVAR
+                    </span>
+                  </button>
+                </div>
+
                 <div className="flex flex-wrap gap-4 pt-4">
-                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-[280px]">
+                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-full sm:min-w-[280px]">
                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">LOCALIZAÇÃO PRINCIPAL</p>
                     <div className="flex items-center gap-3">
                       <MapPin className="w-5 h-5 text-blue-600" />
@@ -228,7 +253,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-[280px]">
+                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-full sm:min-w-[280px]">
                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">COLABORADORES COBERTOS</p>
                     <div className="flex items-center gap-3">
                       <Shield className="w-5 h-5 text-emerald-600" />
@@ -236,30 +261,6 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="shrink-0 relative">
-                <div className={`absolute inset-0 rounded-full blur-[70px] opacity-30 transition-all duration-700 bg-red-600 ${panicStep === 'confirming' ? 'scale-125' : 'scale-100'}`}></div>
-                <button
-                  onClick={handlePanicClick}
-                  disabled={panicStep === 'activating' || panicStep === 'active' || panicStep === 'waiting_dispatch'}
-                  className={`relative w-72 h-72 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-2xl active:scale-95 group ${panicStep === 'confirming' ? 'bg-orange-600 scale-105' :
-                      panicStep === 'active' ? 'bg-emerald-600' :
-                        panicStep === 'activating' ? 'bg-slate-900' :
-                          panicStep === 'waiting_dispatch' ? 'bg-blue-600' :
-                            'bg-red-600 hover:bg-red-700'
-                    }`}
-                >
-                  <div className="w-20 h-20 bg-white/15 rounded-full flex items-center justify-center mb-6">
-                    <AlertCircle className="w-12 h-12 text-white" />
-                  </div>
-                  <span className="text-3xl font-black text-white uppercase tracking-[0.1em] font-corporate">
-                    {panicStep === 'confirming' ? 'CONFIRMAR' : 'EMERGÊNCIA'}
-                  </span>
-                  <span className="text-[11px] font-bold text-white uppercase tracking-widest mt-2 opacity-80">
-                    CLIQUE PARA ATIVAR
-                  </span>
-                </button>
               </div>
             </div>
 

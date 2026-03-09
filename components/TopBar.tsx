@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bell, ChevronDown, ShieldCheck, UserCircle, LogOut, Settings, Hash, UserPlus, Shield } from 'lucide-react';
+import { Bell, ChevronDown, ShieldCheck, UserCircle, LogOut, Settings, Hash, UserPlus, Shield, Menu } from 'lucide-react';
 import { AdminUser } from '../types';
 
 interface TopBarProps {
@@ -8,9 +8,10 @@ interface TopBarProps {
   setActiveTab: (tab: string) => void;
   currentUser: AdminUser;
   onLogout?: () => void;
+  toggleSidebar: () => void;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, onLogout }) => {
+const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, onLogout, toggleSidebar }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const getRoleDisplayName = (role: string, id: string) => {
@@ -44,15 +45,23 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, o
   };
 
   return (
-    <header className="bg-white border-b border-slate-200 px-8 flex flex-col z-40 shrink-0">
+    <header className="bg-white border-b border-slate-200 px-4 md:px-8 flex flex-col z-40 shrink-0">
       <div className="h-16 flex items-center justify-between">
-        <div className="flex items-center gap-10">
-          <nav className="flex gap-6">
+        <div className="flex items-center gap-4 md:gap-10">
+          {/* Mobile Menu Toggle */}
+          <button
+            onClick={toggleSidebar}
+            className="p-2 text-slate-500 hover:text-slate-900 lg:hidden"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+
+          <nav className="hidden lg:flex gap-6">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full border transition-all ${activeTab === 'dashboard'
-                  ? 'text-blue-600 bg-blue-50 border-blue-100'
-                  : 'text-slate-400 border-transparent hover:text-slate-600'
+                ? 'text-blue-600 bg-blue-50 border-blue-100'
+                : 'text-slate-400 border-transparent hover:text-slate-600'
                 }`}
             >
               Centro de Comando
@@ -61,8 +70,8 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, o
               <button
                 onClick={() => setActiveTab('protocols')}
                 className={`text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'protocols'
-                    ? 'text-blue-600'
-                    : 'text-slate-400 hover:text-slate-600'
+                  ? 'text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600'
                   }`}
               >
                 TRIAGEM SSM
@@ -72,8 +81,8 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, o
               <button
                 onClick={() => setActiveTab('map')}
                 className={`text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'map'
-                    ? 'text-blue-600'
-                    : 'text-slate-400 hover:text-slate-600'
+                  ? 'text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600'
                   }`}
               >
                 EMERGÊNCIA
@@ -83,8 +92,8 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, o
               <button
                 onClick={() => setActiveTab('providers')}
                 className={`text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'providers'
-                    ? 'text-blue-600'
-                    : 'text-slate-400 hover:text-slate-600'
+                  ? 'text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600'
                   }`}
               >
                 GESTÃO SSM
@@ -110,7 +119,7 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, o
                 </div>
                 <div className="flex flex-col items-start min-w-[100px]">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-slate-900 leading-none truncate max-w-[120px]">{currentUser.name}</span>
+                    <span className="text-xs font-black text-slate-900 leading-none truncate max-w-[100px] md:max-w-[120px]">{currentUser.name}</span>
                     <ChevronDown className={`w-3 h-3 text-slate-400 group-hover:text-slate-900 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                   </div>
                   <div className="flex items-center gap-1.5 mt-1.5">

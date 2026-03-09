@@ -42,6 +42,7 @@ const App: React.FC = () => {
   const [activeCommIncidentId, setActiveCommIncidentId] = useState<string | null>(null);
   const [commIsMinimized, setCommIsMinimized] = useState(false);
   const [incomingCallIncident, setIncomingCallIncident] = useState<EmergencyCase | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const prevIncidentsRef = useRef<EmergencyCase[]>(incidents);
 
   // Global SOS detection to trigger "Incoming Call" alert across all tabs
@@ -277,10 +278,26 @@ const App: React.FC = () => {
 
   if (isCorporate) {
     return (
-      <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser.role} onLogout={handleLogout} />
-        <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          <TopBar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogout={handleLogout} />
+      <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans relative overflow-x-hidden">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setIsSidebarOpen(false); // Close sidebar on mobile after selection
+          }}
+          userRole={currentUser.role}
+          onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+        <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
+          <TopBar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
           <div className="flex-1 overflow-hidden h-full">
             {activeTab === 'corporate_sos' && (
               <CorporateClientMode
@@ -305,17 +322,17 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'employee_registration' && (
-              <div className="p-8 custom-scrollbar overflow-y-auto h-full">
+              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
                 <EmployeeRegistration companyId={currentUser.companyId} onAddEmployee={handleAddEmployee} />
               </div>
             )}
             {activeTab === 'patients' && (
-              <div className="p-8 custom-scrollbar overflow-y-auto h-full">
+              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
                 <PatientManagement employees={filteredEmployees} currentUser={currentUser} />
               </div>
             )}
             {activeTab === 'profile' && (
-              <div className="p-8 custom-scrollbar overflow-y-auto h-full">
+              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
                 <UserProfileSettings
                   user={currentUser}
                   initialTab="perfil"
@@ -325,7 +342,7 @@ const App: React.FC = () => {
               </div>
             )}
             {activeTab === 'settings' && (
-              <div className="p-8 custom-scrollbar overflow-y-auto h-full">
+              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
                 <UserProfileSettings
                   user={currentUser}
                   initialTab="definicoes"
@@ -342,11 +359,27 @@ const App: React.FC = () => {
 
   try {
     return (
-      <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userRole={currentUser.role} onLogout={handleLogout} />
-        <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          <TopBar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogout={handleLogout} />
-          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+      <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans relative overflow-x-hidden">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setIsSidebarOpen(false); // Close sidebar on mobile after selection
+          }}
+          userRole={currentUser.role}
+          onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+        <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
+          <TopBar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
             {activeTab === 'dashboard' && (
               <DashboardOverview
                 incidents={filteredIncidents}

@@ -27,9 +27,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
 
   return (
     <aside className="w-64 bg-slate-950 text-slate-400 flex flex-col h-screen sticky top-0 border-r border-slate-800 shrink-0">
-      <div className="p-8 flex items-center gap-3">
-        <SSMLogo className="w-10 h-10" />
-        <span className="text-2xl font-black text-white tracking-tight">SSM</span>
+      <div className="p-8 pb-4">
+        <div className="flex items-center gap-4 mb-6">
+          <SSMLogo className="w-12 h-12 shrink-0" />
+          <span className="text-4xl font-black text-white tracking-tighter">SSM</span>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="w-1 bg-blue-600 self-stretch rounded-full opacity-60" />
+          <div className="flex flex-col justify-center">
+            <span className="text-[11px] font-black text-slate-400 tracking-[0.2em] leading-tight">
+              SAFETY & SECURITY
+            </span>
+            <span className="text-lg font-black text-blue-400 tracking-wider leading-none mt-1">
+              MEDICAL
+            </span>
+          </div>
+        </div>
       </div>
       <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
         {menuItems.map((item) => (

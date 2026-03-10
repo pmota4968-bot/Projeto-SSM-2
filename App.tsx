@@ -26,18 +26,16 @@ import EmergencyCommunication from './components/EmergencyCommunication';
 import { COMPANIES as INITIAL_COMPANIES, ADMINS, AMBULANCES as INITIAL_AMBULANCES, EMPLOYEES as INITIAL_EMPLOYEES, RESOURCES as INITIAL_RESOURCES } from './constants';
 import { auditLogger } from './services/auditLogger';
 import { supabase } from './services/supabase';
+import { dbService } from './services/dbService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
-  const [ambulances, setAmbulances] = useState<AmbulanceState[]>(INITIAL_AMBULANCES);
-  const [companies, setCompanies] = useState<Company[]>(INITIAL_COMPANIES);
-  const [resources, setResources] = useState<Resource[]>(INITIAL_RESOURCES);
-  const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
-  const [incidents, setIncidents] = useState<EmergencyCase[]>([
-    { id: 'SSM-MZ-001', timestamp: '12:00', type: 'Crise Hipertensiva', locationName: 'Torre Absa', status: 'active', priority: EmergencyPriority.HIGH, coords: [-25.9680, 32.5710], companyId: 'ABSA' },
-  ]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [ambulances, setAmbulances] = useState<AmbulanceState[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [incidents, setIncidents] = useState<EmergencyCase[]>([]);
   const [triageInitialData, setTriageInitialData] = useState<{ companyName?: string } | null>(null);
   const [activeCommIncidentId, setActiveCommIncidentId] = useState<string | null>(null);
   const [commIsMinimized, setCommIsMinimized] = useState(false);
@@ -65,6 +63,52 @@ const App: React.FC = () => {
   useEffect(() => {
     // Audit log application start
     auditLogger.log({ id: 'SYSTEM', name: 'System', role: 'ADMIN_SSM' }, 'SYSTEM_START', 'INFO', 'Aplicação SSM Digital Command Center iniciada.');
+
+    // Fetch Initial Data
+    const fetchData = async () => {
+      try {
+        const [comps, emps, ambs, ress, incs] = await Promise.all([
+          dbService.getCompanies(),
+          dbService.getEmployees(),
+          dbService.getAmbulances(),
+          dbService.getResources(),
+          dbService.getIncidents()
+        ]);
+        setCompanies(comps);
+        setEmployees(emps);
+        setAmbulances(ambs);
+        setResources(ress);
+        setIncidents(incs);
+      } catch (err) {
+        console.error("Erro ao carregar dados iniciais:", err);
+      }
+    };
+
+    fetchData();
+
+    // Set up real-time GPS tracking listener
+    const gpsSubscription = dbService.subscribeToGps((payload) => {
+      const { imei, coords } = payload.new;
+      setAmbulances(prev => prev.map(amb =>
+        amb.imei === imei ? { ...amb, currentPos: coords as [number, number] } : amb
+      ));
+    });
+
+    // Set up real-time incidents listener
+    const incidentsSubscription = supabase
+      .channel('incidents_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, async (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newInc = payload.new as any;
+          setIncidents(prev => [{ ...newInc, coords: newInc.coords as [number, number] }, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedInc = payload.new as any;
+          setIncidents(prev => prev.map(inc =>
+            inc.id === updatedInc.id ? { ...updatedInc, coords: updatedInc.coords as [number, number] } : inc
+          ));
+        }
+      })
+      .subscribe();
 
     // Listen for auth changes
     let subscription: { unsubscribe: () => void } | null = null;
@@ -113,6 +157,8 @@ const App: React.FC = () => {
 
     return () => {
       if (subscription) subscription.unsubscribe();
+      gpsSubscription.unsubscribe();
+      incidentsSubscription.unsubscribe();
     };
   }, []);
 
@@ -171,19 +217,6 @@ const App: React.FC = () => {
 
   const updateIncidentStatus = (id: string, status: 'active' | 'triage' | 'transit' | 'closed') => {
     setIncidents(prev => prev.map(inc => inc.id === id ? { ...inc, status } : inc));
-  };
-
-  const handleAddCommunicationLog = (log: Omit<CommunicationLog, 'id' | 'timestamp'>) => {
-    const newLog: CommunicationLog = {
-      ...log,
-      id: `COMM-${Date.now()}`,
-      timestamp: new Date().toISOString()
-    };
-    setCommunicationLogs(prev => [newLog, ...prev]);
-
-    if (log.isCritical && currentUser) {
-      auditLogger.log(currentUser, 'COMMUNICATION_LOGGED', undefined, `Comunicação Crítica Registada: ${log.message}`);
-    }
   };
 
   const handleStartTriage = (companyName: string) => {
@@ -269,8 +302,20 @@ const App: React.FC = () => {
 
   // MODO MOTORISTA
   if (currentUser.role === 'MOTORISTA_AMB') {
-    const myIncident = incidents.find(i => i.ambulanceState?.id === 'ALPHA-1' && i.status !== 'closed');
-    return <AmbulanceMode adminName={currentUser.name} onLogout={handleLogout} incident={myIncident || null} onUpdateAmbulance={updateAmbulanceState} onUpdateStatus={updateIncidentStatus} />;
+    // Procura uma ambulância da empresa do motorista
+    const myAmbulance = ambulances.find(amb => amb.companyId === currentUser.companyId);
+    const myIncident = incidents.find(i => i.ambulanceState?.id === myAmbulance?.id && i.status !== 'closed');
+
+    return (
+      <AmbulanceMode
+        adminName={currentUser.name}
+        onLogout={handleLogout}
+        incident={myIncident || null}
+        onUpdateAmbulance={updateAmbulanceState}
+        onUpdateStatus={updateIncidentStatus}
+        imei={myAmbulance?.imei}
+      />
+    );
   }
 
   // MODO CORPORATIVO
@@ -303,7 +348,7 @@ const App: React.FC = () => {
               <CorporateClientMode
                 adminName={currentUser.name}
                 onLogout={handleLogout}
-                onTriggerEmergency={() => {
+                onTriggerEmergency={async () => {
                   const newInc: EmergencyCase = {
                     id: `SOS-${Math.floor(Math.random() * 9000) + 1000}`,
                     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -314,7 +359,13 @@ const App: React.FC = () => {
                     coords: [-25.9680, 32.5710],
                     companyId: currentUser.companyId
                   };
-                  setIncidents(prev => [newInc, ...prev]);
+                  try {
+                    await dbService.saveIncident(newInc);
+                    // No need to setIncidents here because the real-time listener in useEffect will pick it up
+                  } catch (err) {
+                    console.error("Erro ao disparar SOS:", err);
+                    setIncidents(prev => [newInc, ...prev]); // Fallback
+                  }
                 }}
                 companyId={currentUser.companyId}
                 currentUser={currentUser}
@@ -383,12 +434,11 @@ const App: React.FC = () => {
             {activeTab === 'dashboard' && (
               <DashboardOverview
                 incidents={filteredIncidents}
-                currentUser={currentUser}
                 onDispatch={handleDispatch}
-                communicationLogs={communicationLogs}
-                onAddCommunicationLog={handleAddCommunicationLog}
-                ambulances={filteredAmbulances}
-                companies={filteredCompanies}
+                currentUser={currentUser}
+                onUpdateIncident={updateIncidentStatus}
+                ambulances={ambulances}
+                companies={companies}
                 onStartTriage={handleStartTriage}
                 onOpenComm={setActiveCommIncidentId}
               />
@@ -492,8 +542,6 @@ const App: React.FC = () => {
               <EmergencyCommunication
                 incidentId={activeCommIncidentId}
                 company={filteredCompanies.find(c => c.id === filteredIncidents.find(i => i.id === activeCommIncidentId)?.companyId)}
-                communicationLogs={communicationLogs.filter(l => l.incidentId === activeCommIncidentId)}
-                onAddCommunicationLog={handleAddCommunicationLog}
                 currentUser={currentUser}
                 onStartTriage={handleStartTriage}
                 isMinimized={commIsMinimized}

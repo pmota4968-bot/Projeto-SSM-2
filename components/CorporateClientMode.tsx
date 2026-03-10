@@ -11,6 +11,7 @@ import { auditLogger } from '../services/auditLogger';
 import L from 'leaflet';
 
 import { EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, OperationReport, Employee, CommunicationLog, Company, Resource } from '../types';
+import { WebRTCService, WebRTCState } from '../services/webRTCService';
 
 interface CorporateClientModeProps {
   onTriggerEmergency: () => void;
@@ -39,6 +40,63 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const ambulanceMarkerRef = useRef<L.Marker | null>(null);
   const routePolylineRef = useRef<L.Polyline | null>(null);
+
+  // WebRTC State
+  const [webrtcState, setWebrtcState] = useState<WebRTCState>({
+    peerId: null,
+    isConnected: false,
+    incomingCall: null,
+    activeCall: null,
+    localStream: null,
+    remoteStream: null,
+    isVolumeActive: false,
+    isVideoActive: false
+  });
+
+  const webrtcService = useRef<WebRTCService | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (!webrtcService.current && companyId) {
+      webrtcService.current = new WebRTCService((stateUpdate) => {
+        setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
+      });
+      webrtcService.current.initialize(`ssm-client-${companyId}`);
+    }
+
+    return () => {
+      webrtcService.current?.destroy();
+      webrtcService.current = null;
+    };
+  }, [companyId]);
+
+  useEffect(() => {
+    if (webrtcState.remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = webrtcState.remoteStream;
+    }
+  }, [webrtcState.remoteStream]);
+
+  useEffect(() => {
+    if (webrtcState.localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = webrtcState.localStream;
+    }
+  }, [webrtcState.localStream]);
+
+  useEffect(() => {
+    if (webrtcState.incomingCall) {
+      // Auto-answer from central for emergency
+      webrtcService.current?.answerCall(webrtcState.incomingCall, false);
+    }
+  }, [webrtcState.incomingCall]);
+
+  useEffect(() => {
+    setIsCallActive(!!webrtcState.activeCall);
+    if (!webrtcState.activeCall && panicStep === 'active') {
+      setPanicStep('waiting_dispatch');
+      setTimeout(() => setPanicStep('tracking'), 3500);
+    }
+  }, [webrtcState.activeCall]);
 
   const company = COMPANIES.find(c => c.id === companyId);
   const companyName = company?.name || 'EDM Moçambique';
@@ -125,7 +183,11 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     setTimeout(() => {
       onTriggerEmergency();
       setPanicStep('active');
-      setIsCallActive(true);
+
+      // Quando ativar SOS, a central vai ligar para o cliente
+      // Ou o cliente pode ligar para a central: ssm-central-MAIN
+      webrtcService.current?.startCall(`ssm-central-MAIN`, false);
+
       auditLogger.log(
         { id: 'EMP-SOS', name: adminName, role: 'COLABORADOR_RH', companyId: companyId },
         'CORPORATE_SOS_TRIGGERED',
@@ -135,6 +197,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   };
 
   const handleEndCall = () => {
+    webrtcService.current?.endCall();
     setIsCallActive(false);
     setPanicStep('waiting_dispatch');
     setTimeout(() => {
@@ -319,7 +382,21 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
               <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping"></div>
               <Phone className="w-10 h-10 relative z-10" />
             </div>
-            <h3 className="text-2xl font-black text-slate-900 uppercase font-corporate tracking-tight">Linha Prioritária</h3>
+
+            {(webrtcState.remoteStream || webrtcState.localStream) && (
+              <div className="relative w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden mb-8 border-4 border-slate-100 shadow-inner">
+                {webrtcState.remoteStream && (
+                  <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                )}
+                {webrtcState.localStream && (
+                  <div className="absolute bottom-3 right-3 w-28 aspect-video bg-slate-800 rounded-xl overflow-hidden border-2 border-white/20">
+                    <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <h3 className="text-2xl font-black text-slate-900 uppercase font-corporate tracking-tight">Linha Prioritária WebRTC</h3>
             <p className="text-[11px] font-black text-red-600 uppercase tracking-widest mt-3 animate-pulse">Operador em Linha...</p>
             <div className="my-10">
               <p className="text-sm font-medium text-slate-500 leading-relaxed px-4">Mantenha a calma. O despachante está a recolher os dados para o envio imediato da unidade.</p>

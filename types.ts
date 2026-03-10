@@ -107,6 +107,8 @@ export interface AmbulanceState {
   phase: 'idle' | 'pending_accept' | 'en_route_to_patient' | 'at_patient' | 'evacuating' | 'at_hospital';
   status: 'available' | 'maintenance' | 'break';
   companyId?: string; // Adicionado para isolamento de empresas de ambulância
+  imei?: string;
+  capacity?: string;
   eta: number;
   distance: number;
   performance: {

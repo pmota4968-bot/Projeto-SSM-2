@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { EmergencyCase, EmergencyPriority, Employee, Company, OperationReport, AdminUser, AmbulanceState, CommunicationLog } from '../types';
 import { COMPANIES, EMPLOYEES, PRIORITY_COLORS, AMBULANCES } from '../constants';
-import EmergencyCommunication from './EmergencyCommunication';
 import NetworkMap from './NetworkMap';
 import AmbulanceTracker from './AmbulanceTracker';
 import { auditLogger } from '../services/auditLogger';
@@ -23,7 +22,6 @@ interface DashboardOverviewProps {
   onDispatch?: (incidentId: string, ambId: string) => void;
   currentUser?: AdminUser;
   onUpdateIncident?: (incidentId: string, updates: Partial<EmergencyCase>) => void;
-  communicationLogs: CommunicationLog[];
   ambulances?: AmbulanceState[];
   companies?: Company[];
   onStartTriage?: (companyName: string) => void;
@@ -41,8 +39,6 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onDispatch,
   currentUser,
   onUpdateIncident,
-  communicationLogs,
-  onAddCommunicationLog,
   ambulances = [],
   companies = COMPANIES,
   onStartTriage,

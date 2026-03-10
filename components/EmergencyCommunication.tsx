@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, MessageSquare, Phone, Video, Send, User, PhoneOff, VideoOff, Timer, History, Play, Clock, Truck, Building2, ShieldCheck, Globe, Users, AlertTriangle, CheckCircle, Maximize2, Minimize2 } from 'lucide-react';
-import { EmergencyCase, Employee, CommunicationLog, AdminUser, Company } from '../types';
+import { EmergencyCase, Employee, CommunicationLog, AdminUser, Company, AmbulanceState } from '../types';
 import { COMPANIES } from '../constants';
+import { dbService } from '../services/dbService';
+import { WebRTCService, WebRTCState } from '../services/webRTCService';
 
 interface EmergencyCommunicationProps {
   incidentId: string;
   company?: Company;
-  communicationLogs: CommunicationLog[];
-  onAddCommunicationLog: (log: Omit<CommunicationLog, 'id' | 'timestamp'>) => void;
   currentUser?: AdminUser;
   onStartTriage?: (companyName: string) => void;
   isMinimized?: boolean;
@@ -19,8 +19,6 @@ interface EmergencyCommunicationProps {
 const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   incidentId,
   company,
-  communicationLogs,
-  onAddCommunicationLog,
   currentUser,
   onStartTriage,
   isMinimized = false,
@@ -31,11 +29,99 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   const [activeChannel, setActiveChannel] = useState<'CLIENTE' | 'AMBULANCIA' | 'EXTERNAL' | 'STAKEHOLDER'>('CLIENTE');
   const [inputValue, setInputValue] = useState('');
   const [isCritical, setIsCritical] = useState(false);
+  const [logs, setLogs] = useState<CommunicationLog[]>([]);
 
   // Call state
   const [isCallActive, setIsCallActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
+
+  // WebRTC State
+  const [webrtcState, setWebrtcState] = useState<WebRTCState>({
+    peerId: null,
+    isConnected: false,
+    incomingCall: null,
+    activeCall: null,
+    localStream: null,
+    remoteStream: null,
+    isVolumeActive: false,
+    isVideoActive: false
+  });
+
+  const webrtcService = useRef<WebRTCService | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (!webrtcService.current) {
+      webrtcService.current = new WebRTCService((stateUpdate) => {
+        setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
+      });
+      // ID para a central: ssm-central-[incidentId]
+      webrtcService.current.initialize(`ssm-central-${incidentId}`);
+    }
+
+    return () => {
+      webrtcService.current?.destroy();
+      webrtcService.current = null;
+    };
+  }, [incidentId]);
+
+  useEffect(() => {
+    if (webrtcState.remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = webrtcState.remoteStream;
+    }
+  }, [webrtcState.remoteStream]);
+
+  useEffect(() => {
+    if (webrtcState.localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = webrtcState.localStream;
+    }
+  }, [webrtcState.localStream]);
+
+  useEffect(() => {
+    setIsCallActive(!!webrtcState.activeCall);
+  }, [webrtcState.activeCall]);
+
+  // Load and Subscribe to Chat Logs
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const data = await dbService.getCommunicationLogs(incidentId);
+        setLogs(data);
+      } catch (err) {
+        console.error("Erro ao carregar logs de comunicação:", err);
+      }
+    };
+
+    fetchLogs();
+
+    const sub = dbService.subscribeToChat(incidentId, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        const newLog = payload.new;
+        const formattedLog: CommunicationLog = {
+          id: newLog.id,
+          incidentId: newLog.incident_id,
+          senderId: newLog.sender_id,
+          senderName: newLog.sender_name,
+          senderRole: newLog.sender_role,
+          recipient: newLog.recipient,
+          message: newLog.message,
+          type: newLog.type,
+          isCritical: newLog.is_critical,
+          timestamp: newLog.timestamp
+        };
+        setLogs(prev => {
+          if (prev.some(l => l.id === formattedLog.id)) return prev;
+          return [...prev, formattedLog];
+        });
+      }
+    });
+
+    return () => {
+      sub.unsubscribe();
+    };
+  }, [incidentId]);
 
   useEffect(() => {
     if (isCallActive) {
@@ -59,29 +145,39 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
 
 
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim() || !currentUser) return;
 
-    onAddCommunicationLog({
-      incidentId: incidentId,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderRole: currentUser.role,
-      recipient: activeChannel,
-      message: inputValue,
-      type: activeTab === 'chat' ? 'SYSTEM' : 'EXTERNAL',
-      isCritical: isCritical
-    });
+    try {
+      await dbService.saveCommunicationLog({
+        incidentId: incidentId,
+        senderId: currentUser.id,
+        senderName: currentUser.name,
+        senderRole: currentUser.role,
+        recipient: activeChannel,
+        message: inputValue,
+        type: activeTab === 'chat' ? 'SYSTEM' : 'EXTERNAL',
+        isCritical: isCritical
+      });
 
-    setInputValue('');
-    setIsCritical(false);
+      setInputValue('');
+      setIsCritical(false);
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      alert("Erro ao enviar mensagem. Tente novamente.");
+    }
   };
 
   const startCall = (type: 'voz' | 'video') => {
-    setIsCallActive(true);
-    if (!currentUser) return;
+    if (!currentUser || !webrtcService.current) return;
 
-    onAddCommunicationLog({
+    // Target ID: ssm-amb-[ambulanceId]
+    // Para simplificar, assumimos que estamos a ligar para a Alpha-1 se for Viatura
+    const targetId = activeChannel === 'AMBULANCIA' ? `ssm-amb-ALPHA-1` : `ssm-client-${company?.id}`;
+
+    webrtcService.current.startCall(targetId, type === 'video');
+
+    dbService.saveCommunicationLog({
       incidentId: incidentId,
       senderId: currentUser.id,
       senderName: currentUser.name,
@@ -92,7 +188,6 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
       isCritical: true
     });
 
-    // Se o canal for CLIENTE, iniciar automaticamente a triagem
     if (activeChannel === 'CLIENTE' && onStartTriage) {
       onStartTriage(company?.name || 'Cliente Externo');
     }
@@ -100,10 +195,11 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
 
   const endCall = () => {
     const duration = formatDuration(elapsedSeconds);
-    setIsCallActive(false);
+    webrtcService.current?.endCall();
+
     if (!currentUser) return;
 
-    onAddCommunicationLog({
+    dbService.saveCommunicationLog({
       incidentId: incidentId,
       senderId: currentUser.id,
       senderName: currentUser.name,
@@ -260,7 +356,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
       {/* Conteúdo Dinâmico */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[350px] max-h-[450px] bg-[#FAFBFE] custom-scrollbar relative">
         {activeTab === 'chat' ? (
-          communicationLogs.filter(l => l.recipient === activeChannel).map(log => (
+          logs.filter(l => l.recipient === activeChannel).map(log => (
             <div key={log.id} className={`flex gap-3 ${log.senderId === currentUser?.id ? 'flex-row-reverse' : 'flex-row'} animate-in slide-in-from-bottom-2`}>
               <div className={`flex flex-col max-w-[80%] ${log.senderId === currentUser?.id ? 'items-end' : 'items-start'}`}>
                 {log.senderId !== currentUser?.id && <span className="text-[10px] font-black text-slate-900 mb-1 ml-1">{log.senderName}</span>}
@@ -278,7 +374,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
           ))
         ) : activeTab === 'historico' ? (
           <div className="space-y-4">
-            {communicationLogs.map(log => (
+            {logs.map(log => (
               <div key={log.id} className={`flex items-center justify-between p-4 bg-white border rounded-2xl shadow-sm ${log.isCritical ? 'border-red-200 bg-red-50/30' : 'border-slate-100'}`}>
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${log.recipient === 'CLIENTE' ? 'bg-orange-50 text-orange-600' :
@@ -304,12 +400,22 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
         ) : (
           <div className="h-full flex flex-col items-center justify-center animate-in fade-in duration-500">
             {isCallActive ? (
-              <div className="flex flex-col items-center gap-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping"></div>
-                  <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-2xl relative z-10 border-4 border-[#E0F2FE]">
-                    {activeTab === 'voz' ? <Phone className="w-12 h-12" /> : <Video className="w-12 h-12" />}
-                  </div>
+              <div className="flex flex-col items-center gap-8 w-full px-10">
+                <div className="relative w-full max-w-md aspect-video bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-[#E0F2FE]">
+                  {webrtcState.remoteStream ? (
+                    <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-blue-400">
+                      <div className="absolute inset-0 bg-blue-500/10 animate-pulse"></div>
+                      {activeTab === 'voz' ? <Phone className="w-16 h-16 animate-bounce" /> : <Video className="w-16 h-16 animate-pulse" />}
+                    </div>
+                  )}
+
+                  {webrtcState.localStream && (
+                    <div className="absolute bottom-4 right-4 w-32 aspect-video bg-slate-800 rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
+                      <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+                    </div>
+                  )}
                 </div>
                 <div className="text-center space-y-4">
                   <div className="flex items-center justify-center gap-4">
@@ -318,7 +424,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
                       {formatDuration(elapsedSeconds)}
                     </p>
                   </div>
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Chamada em Curso</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Chamada em Curso via WebRTC</p>
                 </div>
                 <button onClick={endCall} className="bg-red-600 hover:bg-red-700 text-white px-12 py-5 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center gap-3 shadow-xl shadow-red-600/20 transition-all active:scale-95">
                   <PhoneOff className="w-5 h-5" /> Terminar Chamada

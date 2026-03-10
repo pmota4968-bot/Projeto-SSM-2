@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { UserPlus, User, Shield, Phone, Heart, FileText, Save, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Employee } from '../types';
+import { dbService } from '../services/dbService';
 
 interface EmployeeRegistrationProps {
   companyId?: string;
@@ -11,7 +12,7 @@ interface EmployeeRegistrationProps {
 const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, onAddEmployee }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     bi: '',
@@ -26,12 +27,11 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
     emergencyContactPhone: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulação de processamento e criação de ID
-    setTimeout(() => {
+
+    try {
       const newEmployee: Employee = {
         id: `EMP-${Math.floor(Math.random() * 10000)}`,
         companyId: companyId || 'INTERNAL',
@@ -52,10 +52,10 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
         medicalHistory: formData.medicalHistory
       };
 
+      await dbService.saveEmployee(newEmployee);
       onAddEmployee(newEmployee);
-      setIsSubmitting(false);
       setShowSuccess(true);
-      
+
       // Limpar formulário
       setFormData({
         name: '', bi: '', age: '', sex: 'M', bloodType: 'O+',
@@ -64,7 +64,12 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
       });
 
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1200);
+    } catch (error) {
+      console.error("Erro ao salvar colaborador:", error);
+      alert("Erro ao salvar colaborador no banco de dados.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -95,7 +100,7 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
 
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm overflow-hidden mb-10">
         <div className="p-8 lg:p-12 space-y-12">
-          
+
           {/* Seção 1: Informação Pessoal */}
           <section className="space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">

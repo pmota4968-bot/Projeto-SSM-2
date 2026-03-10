@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { 
-  Activity, CheckCircle2, Clock, Info, Search, 
-  RotateCcw, Map as MapIcon, Grid, List, 
-  Package, LayoutGrid, Filter
+import {
+  Activity, CheckCircle2, Clock, Info, Search,
+  RotateCcw, Map as MapIcon, Grid, List,
+  Package, LayoutGrid, Filter, Layers
 } from 'lucide-react';
 import NetworkMap from './NetworkMap';
 import ResourceGrid from './ResourceGrid';
@@ -18,6 +18,13 @@ interface ResourceManagementProps {
 
 const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, resources, companies = [], employees = [] }) => {
   const [view, setView] = useState<'map' | 'grid' | 'list'>('map');
+  const [showStatusLegend, setShowStatusLegend] = useState(false);
+
+  React.useEffect(() => {
+    if (window.innerWidth >= 768) {
+      setShowStatusLegend(true);
+    }
+  }, []);
 
   const activeIncidents = incidents.filter(i => i.status !== 'closed').length;
   const assignedAmbulances = incidents.filter(i => i.ambulanceId && i.status !== 'closed').length;
@@ -50,13 +57,13 @@ const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, reso
       <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
         <div className="flex-1 min-w-[280px] relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar recursos por nome, ID ou localização..." 
+          <input
+            type="text"
+            placeholder="Pesquisar recursos por nome, ID ou localização..."
             className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium"
           />
         </div>
-        
+
         <div className="flex items-center gap-2">
           <select className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer">
             <option>Todos os Tipos</option>
@@ -88,19 +95,19 @@ const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, reso
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-black text-slate-900 font-corporate uppercase tracking-tight">Mapa de Recursos</h2>
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button 
+            <button
               onClick={() => setView('map')}
               className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${view === 'map' ? 'bg-medical-blue text-white shadow-lg' : 'text-slate-500'}`}
             >
               <MapIcon className="w-4 h-4" /> Mapa
             </button>
-            <button 
+            <button
               onClick={() => setView('grid')}
               className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${view === 'grid' ? 'bg-medical-blue text-white shadow-lg' : 'text-slate-500'}`}
             >
               <LayoutGrid className="w-4 h-4" /> Grelha
             </button>
-            <button 
+            <button
               onClick={() => setView('list')}
               className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${view === 'list' ? 'bg-medical-blue text-white shadow-lg' : 'text-slate-500'}`}
             >
@@ -110,29 +117,41 @@ const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, reso
         </div>
 
         <div className="h-[600px] shadow-2xl shadow-slate-200/50 rounded-[3rem] overflow-hidden border border-slate-200 relative">
-          <NetworkMap 
-            incidents={incidents} 
-            resources={resources} 
-            companies={companies} 
-            employees={employees} 
+          <NetworkMap
+            incidents={incidents}
+            resources={resources}
+            companies={companies}
+            employees={employees}
           />
-          
-          <div className="absolute top-24 right-8 z-[500] bg-white/95 backdrop-blur-sm p-5 rounded-[2rem] border border-slate-100 shadow-2xl pointer-events-none">
-            <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-900 mb-4 border-b border-slate-100 pb-2">Legenda</h5>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></div>
-                <span className="text-[10px] font-bold uppercase text-slate-600">Disponível (4)</span>
+
+          <div className="absolute top-24 right-8 z-[500] pointer-events-none flex flex-col items-end gap-2">
+            <button
+              onClick={() => setShowStatusLegend(!showStatusLegend)}
+              className="bg-white/95 backdrop-blur-sm p-3 rounded-2xl border border-slate-100 shadow-xl pointer-events-auto text-slate-700 hover:text-blue-600 transition-all font-black uppercase text-[10px] flex items-center gap-2"
+            >
+              <Layers className="w-4 h-4" />
+              <span>Legenda</span>
+            </button>
+
+            {showStatusLegend && (
+              <div className="bg-white/95 backdrop-blur-sm p-5 rounded-[2rem] border border-slate-100 shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+                <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-900 mb-4 border-b border-slate-100 pb-2">Legenda de Estados</h5>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></div>
+                    <span className="text-[10px] font-bold uppercase text-slate-600">Disponível (4)</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-50"></div>
+                    <span className="text-[10px] font-bold uppercase text-slate-600">Atribuído (2)</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-50"></div>
+                    <span className="text-[10px] font-bold uppercase text-slate-600">Offline (2)</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-50"></div>
-                <span className="text-[10px] font-bold uppercase text-slate-600">Atribuído (2)</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-4 ring-red-50"></div>
-                <span className="text-[10px] font-bold uppercase text-slate-600">Offline (2)</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

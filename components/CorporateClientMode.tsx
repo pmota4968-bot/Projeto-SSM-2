@@ -156,9 +156,6 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                 </h2>
                 <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">Unidade ALPHA-1 Despachada • Monitorização GPS Activa</p>
               </div>
-              <button onClick={() => setPanicStep('idle')} className="bg-slate-900 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">
-                Finalizar Emergência
-              </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[600px]">

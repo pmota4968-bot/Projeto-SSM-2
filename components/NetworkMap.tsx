@@ -1,9 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { 
-  Layers, Hospital, Truck, AlertCircle, MapPin, 
-  Activity, User, Phone, Shield, Heart, FileText, X, 
+import {
+  Layers, Hospital, Truck, AlertCircle, MapPin,
+  Activity, User, Phone, Shield, Heart, FileText, X,
   Navigation, Info, AlertTriangle, CheckCircle2, Globe, Map as MapIcon,
   Maximize2, Minimize2, Crosshair
 } from 'lucide-react';
@@ -17,12 +17,12 @@ interface NetworkMapProps {
   hideSidebar?: boolean;
 }
 
-const NetworkMap: React.FC<NetworkMapProps> = ({ 
-  incidents, 
-  resources = [], 
-  companies = [], 
-  employees = [], 
-  hideSidebar = false 
+const NetworkMap: React.FC<NetworkMapProps> = ({
+  incidents,
+  resources = [],
+  companies = [],
+  employees = [],
+  hideSidebar = false
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -30,7 +30,15 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'local' | 'national'>('local');
-  
+  const [showLegend, setShowLegend] = useState(false);
+
+  useEffect(() => {
+    // Show legend by default on larger screens
+    if (window.innerWidth >= 768) {
+      setShowLegend(true);
+    }
+  }, []);
+
   const layersRef = useRef<{
     incidents: L.LayerGroup;
     hospitals: L.LayerGroup;
@@ -73,14 +81,14 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
     }
 
     if (!mapRef.current) {
-      const initialCoords: [number, number] = [-25.9692, 32.5732]; 
+      const initialCoords: [number, number] = [-25.9692, 32.5732];
       mapRef.current = L.map(mapContainerRef.current, { zoomControl: false, attributionControl: false }).setView(initialCoords, 13);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapRef.current);
-      
+
       layersRef.current.incidents.addTo(mapRef.current);
       layersRef.current.hospitals.addTo(mapRef.current);
       layersRef.current.ambulances.addTo(mapRef.current);
-      
+
       L.control.zoom({ position: 'bottomright' }).addTo(mapRef.current);
     }
 
@@ -101,7 +109,7 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
       const isUrgent = inc.status === 'active' || inc.status === 'triage';
       const colorHex = isUrgent ? '#dc2626' : '#2563eb'; // red-600, blue-600
       const pulseColorHex = isUrgent ? 'rgba(220, 38, 38, 0.2)' : 'rgba(37, 99, 235, 0.2)';
-      
+
       const icon = L.divIcon({
         className: 'custom-marker',
         html: `
@@ -158,19 +166,19 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
       `;
 
       const marker = L.marker(p.pos, { icon })
-        .on('click', (e) => { 
-          setSelectedProviderId(p.id); 
-          L.DomEvent.stopPropagation(e); 
+        .on('click', (e) => {
+          setSelectedProviderId(p.id);
+          L.DomEvent.stopPropagation(e);
         })
-        .bindTooltip(tooltipContent, { 
-          direction: 'top', 
-          offset: [0, -20], 
-          className: 'custom-leaflet-tooltip', 
+        .bindTooltip(tooltipContent, {
+          direction: 'top',
+          offset: [0, -20],
+          className: 'custom-leaflet-tooltip',
           permanent: false,
-          interactive: true 
+          interactive: true
         })
         .addTo(isHospital ? layersRef.current.hospitals : layersRef.current.ambulances);
-      
+
       if (isSelected) marker.openTooltip();
     });
     if (mapRef.current) {
@@ -198,7 +206,7 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
           </div>
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-           <button onClick={setMapToLocal} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${viewMode === 'local' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+          <button onClick={setMapToLocal} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${viewMode === 'local' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
             <MapIcon className="w-3.5 h-3.5" /> Maputo
           </button>
           <button onClick={setMapToNational} className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 ${viewMode === 'national' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -268,25 +276,25 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                   {Array.from(new Set(providers.map(p => p.province))).map(prov => (
-                     <div key={prov} className="space-y-2">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{prov}</div>
-                        {providers.filter(p => p.province === prov).map(p => {
-                          const isOccupied = p.status.toLowerCase().includes('ocupado');
-                          const isAvailable = p.status.toLowerCase().includes('disponível') || p.status.toLowerCase().includes('vagas') || p.status.toLowerCase().includes('operacional');
-                          const isSelected = selectedProviderId === p.id;
-                          return (
-                            <div key={p.id} onClick={() => { setSelectedProviderId(p.id); if (mapRef.current) mapRef.current.flyTo(p.pos, 15); }} className={`bg-white p-3 rounded-xl border transition-all shadow-sm flex items-center gap-3 cursor-pointer ${isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/30' : 'border-slate-100 hover:border-blue-500'}`}>
-                                <div className={`p-2 rounded-lg ${p.type === 'hospital' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>{p.type === 'hospital' ? <Hospital className="w-4 h-4" /> : <Truck className="w-4 h-4" />}</div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-black text-slate-900 leading-none mb-1 truncate">{p.label}</div>
-                                  <div className={`text-[9px] font-bold uppercase flex items-center gap-1.5 ${isOccupied ? 'text-orange-500' : isAvailable ? 'text-emerald-500' : 'text-slate-400'}`}>{isOccupied ? <AlertTriangle className="w-2.5 h-2.5" /> : isAvailable ? <CheckCircle2 className="w-2.5 h-2.5" /> : null}{p.status}</div>
-                                </div>
+                  {Array.from(new Set(providers.map(p => p.province))).map(prov => (
+                    <div key={prov} className="space-y-2">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{prov}</div>
+                      {providers.filter(p => p.province === prov).map(p => {
+                        const isOccupied = p.status.toLowerCase().includes('ocupado');
+                        const isAvailable = p.status.toLowerCase().includes('disponível') || p.status.toLowerCase().includes('vagas') || p.status.toLowerCase().includes('operacional');
+                        const isSelected = selectedProviderId === p.id;
+                        return (
+                          <div key={p.id} onClick={() => { setSelectedProviderId(p.id); if (mapRef.current) mapRef.current.flyTo(p.pos, 15); }} className={`bg-white p-3 rounded-xl border transition-all shadow-sm flex items-center gap-3 cursor-pointer ${isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/30' : 'border-slate-100 hover:border-blue-500'}`}>
+                            <div className={`p-2 rounded-lg ${p.type === 'hospital' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>{p.type === 'hospital' ? <Hospital className="w-4 h-4" /> : <Truck className="w-4 h-4" />}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-black text-slate-900 leading-none mb-1 truncate">{p.label}</div>
+                              <div className={`text-[9px] font-bold uppercase flex items-center gap-1.5 ${isOccupied ? 'text-orange-500' : isAvailable ? 'text-emerald-500' : 'text-slate-400'}`}>{isOccupied ? <AlertTriangle className="w-2.5 h-2.5" /> : isAvailable ? <CheckCircle2 className="w-2.5 h-2.5" /> : null}{p.status}</div>
                             </div>
-                          );
-                        })}
-                     </div>
-                   ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -296,10 +304,22 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
         <div className="flex-1 relative bg-slate-50">
           <div ref={mapContainerRef} className="absolute inset-0 z-0" />
           <div className="absolute top-6 left-6 z-[400] flex flex-col gap-2 pointer-events-none">
-            <div className="bg-white/90 backdrop-blur px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xl flex flex-wrap gap-6">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-600 ring-4 ring-red-100"></div><span className="text-[10px] font-black uppercase text-slate-700">Emergência Ativa</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-600 ring-4 ring-emerald-100"></div><span className="text-[10px] font-black uppercase text-slate-700">Rede Hospitalar</span></div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-600 ring-4 ring-blue-100"></div><span className="text-[10px] font-black uppercase text-slate-700">Rede Ambulatorial</span></div>
+            <div className="flex flex-col items-start gap-2">
+              <button
+                onClick={() => setShowLegend(!showLegend)}
+                className="bg-white/90 backdrop-blur p-3 rounded-2xl border border-slate-200 shadow-xl pointer-events-auto flex items-center gap-2 text-slate-700 hover:text-blue-600 transition-all font-black uppercase text-[10px]"
+              >
+                <Layers className="w-4 h-4" />
+                <span>Legenda</span>
+              </button>
+
+              {showLegend && (
+                <div className="bg-white/90 backdrop-blur px-4 py-2.5 rounded-2xl border border-slate-200 shadow-xl flex flex-col md:flex-row gap-3 md:gap-6 animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-auto">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-600 ring-4 ring-red-100"></div><span className="text-[10px] font-black uppercase text-slate-700">Emergência Ativa</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-600 ring-4 ring-emerald-100"></div><span className="text-[10px] font-black uppercase text-slate-700">Rede Hospitalar</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-600 ring-4 ring-blue-100"></div><span className="text-[10px] font-black uppercase text-slate-700">Rede Ambulatorial</span></div>
+                </div>
+              )}
             </div>
             {viewMode === 'national' && <div className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl animate-in slide-in-from-top-4">Rede Nacional SSM: Activa em 4 Províncias</div>}
           </div>
@@ -312,7 +332,7 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
           </div>
         </div>
       </div>
-      
+
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }

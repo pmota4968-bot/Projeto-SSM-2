@@ -8,21 +8,22 @@ import {
   Calendar, MapPin, Hash, UserCircle, Settings,
   MessageSquare, Languages, Clock, Sun, Moon, ChevronRight
 } from 'lucide-react';
-import { AdminUser, UserRole } from '../types';
-import { COMPANIES } from '../constants';
+import { AdminUser, UserRole, Company } from '../types';
 
 interface UserProfileSettingsProps {
   user: AdminUser;
   initialTab?: 'perfil' | 'definicoes';
   onUpdateUser: (updates: Partial<AdminUser>) => void;
   onClose: () => void;
+  companies?: Company[];
 }
 
 const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
   user,
   initialTab = 'perfil',
   onUpdateUser,
-  onClose
+  onClose,
+  companies = []
 }) => {
   const [activeView, setActiveView] = useState<'perfil' | 'definicoes'>(initialTab);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'seguranca' | 'notificacoes' | 'preferencias' | 'privacidade' | 'conta'>('seguranca');
@@ -92,7 +93,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     }
   };
 
-  const associatedCompany = COMPANIES.find(c => c.id === user.companyId);
+  const associatedCompany = companies.find(c => c.id === user.companyId);
 
   return (
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -100,7 +101,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
       {/* Feedback Toast */}
       {toast && (
         <div className={`fixed bottom-8 right-8 z-[120] p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-right-10 border ${toast.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' :
-            toast.type === 'error' ? 'bg-red-600 border-red-500 text-white' : 'bg-orange-500 border-orange-400 text-white'
+          toast.type === 'error' ? 'bg-red-600 border-red-500 text-white' : 'bg-orange-500 border-orange-400 text-white'
           }`}>
           {toast.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
           <span className="text-sm font-black uppercase tracking-widest">{toast.message}</span>

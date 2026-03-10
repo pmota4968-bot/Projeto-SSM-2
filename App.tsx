@@ -543,6 +543,7 @@ const App: React.FC = () => {
                 initialTab="perfil"
                 onClose={() => setActiveTab('dashboard')}
                 onUpdateUser={handleUpdateUser}
+                companies={companies}
               />
             )}
             {activeTab === 'settings' && (
@@ -554,7 +555,10 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'accounts' && currentUser.role === 'ADMIN_SSM' && (
-              <AccountManagement onClose={() => setActiveTab('dashboard')} />
+              <AccountManagement
+                onClose={() => setActiveTab('dashboard')}
+                companies={companies}
+              />
             )}
           </div>
         </main>

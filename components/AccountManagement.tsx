@@ -7,12 +7,12 @@ import {
   MoreHorizontal, Filter, X, Save, AlertTriangle, Hash,
   Settings2, UserMinus
 } from 'lucide-react';
-import { UserRole, AdminUser } from '../types';
-import { COMPANIES, ADMINS } from '../constants';
+import { UserRole, AdminUser, Company } from '../types';
+import { ADMINS } from '../constants';
 import { auditLogger } from '../services/auditLogger';
 import { supabase } from '../services/supabase';
 
-const AccountManagement: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const AccountManagement: React.FC<{ onClose: () => void, companies?: Company[] }> = ({ onClose, companies = [] }) => {
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
   const [accounts, setAccounts] = useState<AdminUser[]>(ADMINS);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -374,7 +374,7 @@ const AccountManagement: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                           <option value="">Selecione a Organização...</option>
                           <option value="NONE">Sem vínculo (Nenhuma empresa)</option>
                           <option value="NEW">Registar Nova Empresa...</option>
-                          {COMPANIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
 

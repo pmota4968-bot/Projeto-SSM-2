@@ -288,26 +288,31 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
             onClick={() => { setActiveChannel('CLIENTE'); setIsCallActive(false); }}
             className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'CLIENTE' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
           >
-            <Building2 className="w-3 h-3" /> Cliente
+            <Building2 className="w-3 h-3" /> {currentUser?.role.includes('CLIENTE') ? 'Coordenação' : 'Cliente'}
           </button>
-          <button
-            onClick={() => { setActiveChannel('AMBULANCIA'); setIsCallActive(false); }}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'AMBULANCIA' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
-          >
-            <Truck className="w-3 h-3" /> Viatura
-          </button>
-          <button
-            onClick={() => { setActiveChannel('EXTERNAL'); setIsCallActive(false); }}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'EXTERNAL' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
-          >
-            <Globe className="w-3 h-3" /> Externo
-          </button>
-          <button
-            onClick={() => { setActiveChannel('STAKEHOLDER'); setIsCallActive(false); }}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'STAKEHOLDER' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
-          >
-            <Users className="w-3 h-3" /> Stakeholders
-          </button>
+
+          {!currentUser?.role.includes('CLIENTE') && (
+            <>
+              <button
+                onClick={() => { setActiveChannel('AMBULANCIA'); setIsCallActive(false); }}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'AMBULANCIA' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
+              >
+                <Truck className="w-3 h-3" /> Viatura
+              </button>
+              <button
+                onClick={() => { setActiveChannel('EXTERNAL'); setIsCallActive(false); }}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'EXTERNAL' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
+              >
+                <Globe className="w-3 h-3" /> Externo
+              </button>
+              <button
+                onClick={() => { setActiveChannel('STAKEHOLDER'); setIsCallActive(false); }}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeChannel === 'STAKEHOLDER' ? 'bg-[#E0F2FE] text-slate-900 shadow-xl' : 'text-white/40 hover:text-white'}`}
+              >
+                <Users className="w-3 h-3" /> Stakeholders
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -320,9 +325,10 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
           <div>
             <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Destinatário</p>
             <p className="text-xs font-black text-blue-900 uppercase">
-              {activeChannel === 'CLIENTE' ? company?.name :
-                activeChannel === 'AMBULANCIA' ? 'Unidade Alpha-1 (João C.)' :
-                  activeChannel === 'EXTERNAL' ? 'Agências Externas (Polícia/Bombeiros)' : 'Stakeholders / Administração'}
+              {currentUser?.role.includes('CLIENTE') ? 'Centro de Coordenação SSM' :
+                activeChannel === 'CLIENTE' ? company?.name :
+                  activeChannel === 'AMBULANCIA' ? 'Unidade Alpha-1 (João C.)' :
+                    activeChannel === 'EXTERNAL' ? 'Agências Externas (Polícia/Bombeiros)' : 'Stakeholders / Administração'}
             </p>
           </div>
         </div>
@@ -345,7 +351,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
             className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 font-black uppercase text-[9px] tracking-widest transition-all border-b-4 ${activeTab === tab.id
               ? 'border-blue-600 text-blue-600 bg-[#E0F2FE]'
               : 'border-transparent text-slate-400 hover:text-slate-600'
-              }`}
+              } ${currentUser?.role.includes('CLIENTE') && tab.id === 'historico' ? 'hidden' : ''}`}
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}

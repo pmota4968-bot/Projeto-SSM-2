@@ -20,6 +20,7 @@ interface CorporateClientModeProps {
   companyId?: string;
   currentUser: AdminUser;
   employees: Employee[];
+  onOpenChat: (incidentId: string) => void;
 }
 
 const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
@@ -28,10 +29,12 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   adminName,
   companyId,
   currentUser,
-  employees
+  employees,
+  onOpenChat
 }) => {
   // Estados: idle -> confirming -> activating -> active (call) -> waiting_dispatch -> tracking
   const [panicStep, setPanicStep] = useState<'idle' | 'confirming' | 'activating' | 'active' | 'waiting_dispatch' | 'tracking'>('idle');
+  const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
   const [isCallActive, setIsCallActive] = useState(false);
   const [eta, setEta] = useState(8);
   const [ambulancePos, setAmbulancePos] = useState<[number, number]>([-25.965, 32.575]);
@@ -181,6 +184,8 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const triggerEmergencyProcess = () => {
     setPanicStep('activating');
     setTimeout(() => {
+      const id = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
+      setActiveIncidentId(id);
       onTriggerEmergency();
       setPanicStep('active');
 
@@ -246,7 +251,10 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <button className="w-full bg-[#E0F2FE] text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-slate-100 border border-blue-100">
+                    <button
+                      onClick={() => activeIncidentId && onOpenChat(activeIncidentId)}
+                      className="w-full bg-[#E0F2FE] text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-slate-100 border border-blue-100"
+                    >
                       <MessageSquare className="w-4 h-4" /> Chat com a Coordenação
                     </button>
                     <div className="bg-[#EBFDF5] text-[#065F46] px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 border border-[#D1FAE5]">

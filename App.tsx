@@ -38,10 +38,42 @@ const App: React.FC = () => {
   const [incidents, setIncidents] = useState<EmergencyCase[]>([]);
   const [triageInitialData, setTriageInitialData] = useState<{ companyName?: string } | null>(null);
   const [activeCommIncidentId, setActiveCommIncidentId] = useState<string | null>(null);
+  const [activeIncidentIdForClient, setActiveIncidentIdForClient] = useState<string | null>(null);
   const [commIsMinimized, setCommIsMinimized] = useState(false);
   const [incomingCallIncident, setIncomingCallIncident] = useState<EmergencyCase | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const prevIncidentsRef = useRef<EmergencyCase[]>(incidents);
+
+  // Global WebRTC for Operator/Central
+  const webrtcService = useRef<any>(null);
+  const [webrtcState, setWebrtcState] = useState<any>({ isConnected: false, incomingCall: null, activeCall: null });
+
+  useEffect(() => {
+    if (currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'GESTOR_FROTA_AMB') {
+      import('./services/webRTCService').then(({ WebRTCService }) => {
+        if (!webrtcService.current) {
+          webrtcService.current = new WebRTCService((stateUpdate) => {
+            setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
+          });
+          webrtcService.current.initialize('ssm-central-MAIN');
+        }
+      });
+    }
+    return () => {
+      webrtcService.current?.destroy();
+      webrtcService.current = null;
+    };
+  }, [currentUser?.role]);
+
+  useEffect(() => {
+    if (webrtcState.incomingCall && !activeCommIncidentId) {
+      // Se receber uma chamada e não houver incidente aberto, tentamos associar se houver um SOS recente
+      const recentSOS = incidents.find(i => i.status === 'active' && i.priority === EmergencyPriority.CRITICAL);
+      if (recentSOS) {
+        setIncomingCallIncident(recentSOS);
+      }
+    }
+  }, [webrtcState.incomingCall, activeCommIncidentId, incidents]);
 
   // Global SOS detection to trigger "Incoming Call" alert across all tabs
   useEffect(() => {
@@ -349,8 +381,9 @@ const App: React.FC = () => {
                 adminName={currentUser.name}
                 onLogout={handleLogout}
                 onTriggerEmergency={async () => {
+                  const incidentId = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
                   const newInc: EmergencyCase = {
-                    id: `SOS-${Math.floor(Math.random() * 9000) + 1000}`,
+                    id: incidentId,
                     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     type: 'Pânico Corporativo Ativado',
                     locationName: 'Sede da Empresa (GPS)',
@@ -361,11 +394,16 @@ const App: React.FC = () => {
                   };
                   try {
                     await dbService.saveIncident(newInc);
-                    // No need to setIncidents here because the real-time listener in useEffect will pick it up
+                    setActiveIncidentIdForClient(incidentId);
                   } catch (err) {
                     console.error("Erro ao disparar SOS:", err);
-                    setIncidents(prev => [newInc, ...prev]); // Fallback
+                    setIncidents(prev => [newInc, ...prev]);
+                    setActiveIncidentIdForClient(incidentId);
                   }
+                }}
+                onOpenChat={(id) => {
+                  setActiveCommIncidentId(id);
+                  setCommIsMinimized(false);
                 }}
                 companyId={currentUser.companyId}
                 currentUser={currentUser}

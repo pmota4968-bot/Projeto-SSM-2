@@ -106,7 +106,16 @@ const App: React.FC = () => {
           dbService.getResources(),
           dbService.getIncidents()
         ]);
-        setCompanies(comps);
+
+        // Merge database companies with constants to ensure UI always has data during transition
+        const mergedCompanies = [...INITIAL_COMPANIES];
+        comps.forEach(dbComp => {
+          const index = mergedCompanies.findIndex(c => c.id === dbComp.id);
+          if (index !== -1) mergedCompanies[index] = dbComp;
+          else mergedCompanies.push(dbComp);
+        });
+
+        setCompanies(mergedCompanies);
         setEmployees(emps);
         setAmbulances(ambs);
         setResources(ress);
@@ -212,9 +221,21 @@ const App: React.FC = () => {
     setTimeout(() => setActiveTab('patients'), 1500);
   };
 
-  const handleUpdateUser = (updates: Partial<AdminUser>) => {
+  const handleRegisterCompany = (newCompany: Company) => {
+    setCompanies(prev => [newCompany, ...prev]);
+  };
+
+  const handleUpdateUser = async (updates: Partial<AdminUser>) => {
     if (currentUser) {
-      setCurrentUser({ ...currentUser, ...updates });
+      const updatedUser = { ...currentUser, ...updates };
+      setCurrentUser(updatedUser);
+
+      try {
+        await dbService.updateProfile(currentUser.id, updates);
+        console.log("Perfil atualizado no Supabase com sucesso.");
+      } catch (err) {
+        console.error("Erro ao persistir atualização de perfil:", err);
+      }
     }
   };
 
@@ -504,7 +525,7 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'providers' && <AnalyticsDashboard currentUser={currentUser} companies={filteredCompanies} />}
-            {activeTab === 'companies' && <CorporateClientsAdmin companies={filteredCompanies} employees={employees} />}
+            {activeTab === 'companies' && <CorporateClientsAdmin companies={filteredCompanies} employees={employees} onAddCompany={handleRegisterCompany} />}
 
             {activeTab === 'profile' && (
               <UserProfileSettings

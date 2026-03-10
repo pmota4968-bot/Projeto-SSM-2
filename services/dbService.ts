@@ -11,7 +11,29 @@ export const dbService = {
     },
 
     async saveCompany(company: Company) {
-        const { data, error } = await supabase.from('companies').upsert(company);
+        const companyToSave = {
+            ...company,
+            id: company.id || `COMP-${Math.floor(Math.random() * 9000) + 1000}`
+        };
+        const { data, error } = await supabase.from('companies').upsert(companyToSave);
+        if (error) throw error;
+        return data;
+    },
+
+    // Profiles
+    async getProfile(id: string): Promise<any> {
+        const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single();
+        if (error) throw error;
+        return data;
+    },
+
+    async updateProfile(id: string, updates: any) {
+        const { data, error } = await supabase.from('profiles').update({
+            full_name: updates.name,
+            role: updates.role,
+            company_id: updates.companyId,
+            updated_at: new Date().toISOString()
+        }).eq('id', id);
         if (error) throw error;
         return data;
     },

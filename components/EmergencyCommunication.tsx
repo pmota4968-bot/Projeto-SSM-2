@@ -171,9 +171,20 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   const startCall = (type: 'voz' | 'video') => {
     if (!currentUser || !webrtcService.current) return;
 
-    // Target ID: ssm-amb-[ambulanceId]
-    // Para simplificar, assumimos que estamos a ligar para a Alpha-1 se for Viatura
-    const targetId = activeChannel === 'AMBULANCIA' ? `ssm-amb-ALPHA-1` : `ssm-client-${company?.id}`;
+    let targetId = '';
+    if (activeChannel === 'AMBULANCIA') {
+      targetId = `ssm-amb-ALPHA-1`; // Em prod seria dinâmico via incident.ambulanceId
+    } else if (activeChannel === 'CLIENTE') {
+      if (!company?.id) {
+        alert("Erro: ID da empresa não encontrado para iniciar chamada.");
+        return;
+      }
+      targetId = `ssm-client-${company.id}`;
+    } else {
+      // Para canais externos/stakeholders, poderíamos ter IDs específicos ou ignorar se não aplicável
+      alert(`Chamadas para o canal ${activeChannel} ainda não estão configuradas.`);
+      return;
+    }
 
     webrtcService.current.startCall(targetId, type === 'video');
 

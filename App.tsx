@@ -439,6 +439,7 @@ const App: React.FC = () => {
                 companyId={currentUser.companyId}
                 currentUser={currentUser}
                 employees={filteredEmployees}
+                companies={companies}
               />
             )}
             {activeTab === 'employee_registration' && (

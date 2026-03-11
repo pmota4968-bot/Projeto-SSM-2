@@ -6,7 +6,7 @@ import {
   ChevronRight, Shield, Navigation, Truck, User, PhoneCall,
   MessageSquare, AlertTriangle
 } from 'lucide-react';
-import { COMPANIES, AMBULANCES } from '../constants';
+import { AMBULANCES } from '../constants';
 import { auditLogger } from '../services/auditLogger';
 import L from 'leaflet';
 
@@ -20,6 +20,7 @@ interface CorporateClientModeProps {
   companyId?: string;
   currentUser: AdminUser;
   employees: Employee[];
+  companies?: Company[];
   onOpenChat: (incidentId: string) => void;
 }
 
@@ -30,6 +31,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   companyId,
   currentUser,
   employees,
+  companies = [],
   onOpenChat
 }) => {
   // Estados: idle -> confirming -> activating -> active (call) -> waiting_dispatch -> tracking
@@ -101,8 +103,8 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     }
   }, [webrtcState.activeCall]);
 
-  const company = COMPANIES.find(c => c.id === companyId);
-  const companyName = company?.name || 'EDM Moçambique';
+  const company = companies.find(c => c.id === companyId);
+  const companyName = company?.name || 'Cliente SSN';
   const clientLocation: [number, number] = [-25.9680, 32.5710]; // Torre Absa
 
   // Simulação de movimento da ambulância

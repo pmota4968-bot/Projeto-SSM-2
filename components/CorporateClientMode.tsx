@@ -278,8 +278,8 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         ) : (
           /* DASHBOARD PADRÃO - HERO CARD ALINHADO COM A FOTO */
           <>
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 md:p-16 flex flex-col items-start justify-center gap-10 md:gap-12 relative overflow-hidden">
-              <div className="w-full md:pr-80 space-y-10 relative z-10 text-left">
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 md:p-12 lg:p-16 flex flex-col items-start justify-center gap-10 md:gap-12 relative overflow-hidden">
+              <div className="w-full md:pr-[380px] lg:pr-[450px] space-y-10 relative z-10 text-left">
                 <div className="space-y-6">
                   <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight font-corporate">
                     Bem-vindo, <span className="text-blue-600">{companyName}</span>
@@ -290,7 +290,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                 </div>
 
                 {/* Emergency Button - Visible here on Mobile, absolutely positioned on Desktop */}
-                <div className="md:absolute md:top-1/2 md:right-16 md:-translate-y-1/2 shrink-0 relative flex justify-center w-full md:w-auto">
+                <div className="md:absolute md:top-1/2 md:right-8 lg:right-16 md:-translate-y-1/2 shrink-0 relative flex justify-center w-full md:w-auto">
                   <div className={`absolute inset-0 rounded-full blur-[70px] opacity-30 transition-all duration-700 bg-red-600 ${panicStep === 'confirming' ? 'scale-125' : 'scale-100'}`}></div>
                   <button
                     onClick={handlePanicClick}

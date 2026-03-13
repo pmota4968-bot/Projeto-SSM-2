@@ -348,17 +348,19 @@ const App: React.FC = () => {
       if (currentUser) {
         auditLogger.log(currentUser, 'LOGOUT_MANUAL', undefined, 'Utilizador terminou sessão manualmente.');
       }
-      // Tentamos terminar sessão no Supabase, mas ignoramos erros se falhar 
-      // para garantir que o utilizador consiga "sair" da UI localmente.
-      await supabase.auth.signOut();
     } catch (err) {
-      console.error("Erro ao terminar sessão no Supabase:", err);
+      console.error("Erro ao fazer log de auditoria:", err);
     } finally {
-      // Garantimos que o estado local é limpo independentemente de erros no Supabase
+      // Garantimos que o estado local é limpo imediatamente para o utilizador
       setCurrentUser(null);
       // Opcional: Limpar dados residuais do localStorage se houver
       localStorage.removeItem('supabase.auth.token');
     }
+
+    // Tentamos terminar sessão no Supabase de forma assíncrona, não bloqueando a UI localmente.
+    supabase.auth.signOut().catch(err => {
+      console.error("Erro ao terminar sessão no Supabase:", err);
+    });
   };
 
   if (!currentUser) return <Login onLoginSuccess={handleLogin} />;

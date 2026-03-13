@@ -104,8 +104,11 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   }, [webrtcState.activeCall]);
 
   const company = companies.find(c => c.id === companyId);
-  const companyName = company?.name || 'Cliente SSN';
-  const clientLocation: [number, number] = [-25.9680, 32.5710]; // Torre Absa
+  const companyName = company?.name || 'Cliente SSM';
+  const companyLocationName = company?.address || company?.city || 'Localização não definida';
+  
+  // Exemplo central da empresa, pode vir do Supabase no futuro.
+  const clientLocation: [number, number] = [-25.9680, 32.5710]; 
 
   // Simulação de movimento da ambulância
   useEffect(() => {
@@ -278,59 +281,60 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         ) : (
           /* DASHBOARD PADRÃO - HERO CARD ALINHADO COM A FOTO */
           <>
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 md:p-12 lg:p-16 flex flex-col items-start justify-center gap-10 md:gap-12 relative overflow-hidden">
-              <div className="w-full md:pr-[380px] lg:pr-[450px] space-y-10 relative z-10 text-left">
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 md:p-12 lg:p-16 flex flex-col xl:flex-row items-center justify-between gap-12 relative overflow-hidden">
+              {/* Text Content */}
+              <div className="flex-1 space-y-10 relative z-10 text-left order-2 xl:order-1 w-full">
                 <div className="space-y-6">
                   <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight font-corporate">
                     Bem-vindo, <span className="text-blue-600">{companyName}</span>
                   </h1>
                   <p className="text-slate-500 font-medium text-lg leading-relaxed max-w-xl">
-                    Seu ambiente está protegido pelo <span className="font-bold text-slate-900">SSM Digital</span>. Em caso de qualquer intercorrência médica, acione o botão de emergência abaixo para atendimento imediato.
+                    Seu ambiente está protegido pelo <span className="font-bold text-slate-900">SSM Digital</span>. Em caso de qualquer intercorrência médica, acione o botão de emergência ao lado para atendimento imediato.
                   </p>
                 </div>
 
-                {/* Emergency Button - Visible here on Mobile, absolutely positioned on Desktop */}
-                <div className="md:absolute md:top-1/2 md:right-8 lg:right-16 md:-translate-y-1/2 shrink-0 relative flex justify-center w-full md:w-auto">
-                  <div className={`absolute inset-0 rounded-full blur-[70px] opacity-30 transition-all duration-700 bg-red-600 ${panicStep === 'confirming' ? 'scale-125' : 'scale-100'}`}></div>
-                  <button
-                    onClick={handlePanicClick}
-                    disabled={panicStep === 'activating' || panicStep === 'active' || panicStep === 'waiting_dispatch'}
-                    className={`relative w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-2xl active:scale-95 group ${panicStep === 'confirming' ? 'bg-orange-600 scale-105' :
-                      panicStep === 'active' ? 'bg-emerald-600' :
-                        panicStep === 'activating' ? 'bg-slate-900' :
-                          panicStep === 'waiting_dispatch' ? 'bg-blue-600' :
-                            'bg-red-600 hover:bg-red-700'
-                      }`}
-                  >
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-white/15 rounded-full flex items-center justify-center mb-4 md:mb-6">
-                      <AlertCircle className="w-10 h-10 md:w-12 md:h-12 text-white" />
-                    </div>
-                    <span className="text-2xl md:text-3xl font-black text-white uppercase tracking-[0.1em] font-corporate">
-                      {panicStep === 'confirming' ? 'CONFIRMAR' : 'EMERGÊNCIA'}
-                    </span>
-                    <span className="text-[10px] md:text-[11px] font-bold text-white uppercase tracking-widest mt-2 opacity-80">
-                      CLIQUE PARA ATIVAR
-                    </span>
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-4 pt-4">
-                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-full sm:min-w-[280px]">
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-[240px]">
                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">LOCALIZAÇÃO PRINCIPAL</p>
                     <div className="flex items-center gap-3">
-                      <MapPin className="w-5 h-5 text-blue-600" />
-                      <p className="text-sm font-black text-slate-800">{currentUser.address || 'Localização não definida'}</p>
+                      <MapPin className="w-5 h-5 text-blue-600 shrink-0" />
+                      <p className="text-sm font-black text-slate-800 line-clamp-2">{companyLocationName}</p>
                     </div>
                   </div>
 
-                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-full sm:min-w-[280px]">
+                  <div className="bg-[#E0F2FE] px-8 py-6 rounded-[1.5rem] border border-blue-100 flex-1 min-w-[240px]">
                     <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3">COLABORADORES COBERTOS</p>
                     <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-emerald-600" />
+                      <Shield className="w-5 h-5 text-emerald-600 shrink-0" />
                       <p className="text-sm font-black text-slate-800">{employees.length.toLocaleString()} Ativos</p>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Emergency Button */}
+              <div className="shrink-0 relative flex justify-center order-1 xl:order-2">
+                <div className={`absolute inset-0 rounded-full blur-[70px] opacity-30 transition-all duration-700 bg-red-600 ${panicStep === 'confirming' ? 'scale-125' : 'scale-100'}`}></div>
+                <button
+                  onClick={handlePanicClick}
+                  disabled={panicStep === 'activating' || panicStep === 'active' || panicStep === 'waiting_dispatch'}
+                  className={`relative w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-2xl active:scale-95 group ${panicStep === 'confirming' ? 'bg-orange-600 scale-105' :
+                    panicStep === 'active' ? 'bg-emerald-600' :
+                      panicStep === 'activating' ? 'bg-slate-900' :
+                        panicStep === 'waiting_dispatch' ? 'bg-blue-600' :
+                          'bg-red-600 hover:bg-red-700'
+                    }`}
+                >
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/15 rounded-full flex items-center justify-center mb-4 md:mb-6">
+                    <AlertCircle className="w-10 h-10 md:w-12 md:h-12 text-white" />
+                  </div>
+                  <span className="text-2xl md:text-3xl font-black text-white uppercase tracking-[0.1em] font-corporate">
+                    {panicStep === 'confirming' ? 'CONFIRMAR' : 'EMERGÊNCIA'}
+                  </span>
+                  <span className="text-[10px] md:text-[11px] font-bold text-white uppercase tracking-widest mt-2 opacity-80">
+                    CLIQUE PARA ATIVAR
+                  </span>
+                </button>
               </div>
             </div>
 

@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import {
     Building2, MapPin, Phone, Users, ChevronRight, ArrowLeft,
     Search, Shield, Lock, Heart, ClipboardList, CheckCircle2,
-    AlertTriangle, User, FileText, X
+    AlertTriangle, User, FileText, X, Edit2, Trash2
 } from 'lucide-react';
 import { COMPANIES } from '../constants';
 import { Employee, Company } from '../types';
@@ -27,6 +27,21 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
         phone: '',
         color: '#2563eb'
     });
+    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
+    const [selectedDeletionReason, setSelectedDeletionReason] = useState('');
+    const [customDeletionReason, setCustomDeletionReason] = useState('');
+
+    const deletionReasons = [
+        "Fim de contrato a mais de 1 ano",
+        "Extinção da empresa",
+        "Rescisão mútua de contrato",
+        "Inadimplência prolongada",
+        "Violação de termos de serviço",
+        "Consolidação/Fusão com outra entidade",
+        "Outro"
+    ];
 
     const selectedCompany = companies.find(c => c.id === selectedCompanyId);
 
@@ -71,8 +86,9 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                 phone: newCompany.phone
             };
 
-            const savedCompany = await dbService.saveCompany(companyToSave);
-            if (onAddCompany) onAddCompany(companyToSave);
+            await dbService.saveCompany(companyToSave);
+            // In a real app, we'd trigger a refresh or update local state
+            // For now, assuming parent handles updates via props or we need a local refresh
             setShowCreateModal(false);
             setNewCompany({
                 name: '',
@@ -82,9 +98,53 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                 phone: '',
                 color: '#2563eb'
             });
+            window.location.reload(); // Simple way to refresh for now
         } catch (err) {
             console.error("Erro ao criar empresa:", err);
             alert("Erro ao criar empresa. Verifique a consola.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleUpdateCompany = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingCompany) return;
+
+        setIsSubmitting(true);
+        try {
+            const { dbService } = await import('../services/dbService');
+            await dbService.updateCompany(editingCompany.id, editingCompany);
+            setEditingCompany(null);
+            window.location.reload();
+        } catch (err) {
+            console.error("Erro ao atualizar empresa:", err);
+            alert("Erro ao atualizar empresa. Verifique a consola.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteCompany = async () => {
+        if (!deletingCompanyId) return;
+        const reason = selectedDeletionReason === 'Outro' ? customDeletionReason : selectedDeletionReason;
+        if (!reason) {
+            alert("Por favor, selecione um motivo.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const { dbService } = await import('../services/dbService');
+            await dbService.deleteCompany(deletingCompanyId, reason);
+            setShowDeleteModal(false);
+            setDeletingCompanyId(null);
+            setSelectedDeletionReason('');
+            setCustomDeletionReason('');
+            window.location.reload();
+        } catch (err) {
+            console.error("Erro ao apagar empresa:", err);
+            alert("Erro ao apagar empresa. Verifique a consola.");
         } finally {
             setIsSubmitting(false);
         }
@@ -117,14 +177,33 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                             >
                                 {selectedCompany.name.charAt(0)}
                             </div>
-                            <div className="flex-1 space-y-4">
-                                <div>
-                                    <h2 className="text-3xl font-black text-slate-900 tracking-tight font-corporate uppercase">
-                                        {selectedCompany.name}
-                                    </h2>
-                                    <p className="text-slate-400 font-bold text-[11px] uppercase tracking-widest mt-1">
-                                        {selectedCompany.type} • Plano {selectedCompany.plan}
-                                    </p>
+                            <div className="flex-1 space-y-4 w-full">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div>
+                                        <h2 className="text-3xl font-black text-slate-900 tracking-tight font-corporate uppercase">
+                                            {selectedCompany.name}
+                                        </h2>
+                                        <p className="text-slate-400 font-bold text-[11px] uppercase tracking-widest mt-1">
+                                            {selectedCompany.type} • Plano {selectedCompany.plan}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setEditingCompany(selectedCompany)}
+                                            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                                        >
+                                            <Edit2 className="w-4 h-4" /> Editar
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setDeletingCompanyId(selectedCompany.id);
+                                                setShowDeleteModal(true);
+                                            }}
+                                            className="px-6 py-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all flex items-center gap-2"
+                                        >
+                                            <Trash2 className="w-4 h-4" /> Apagar Conta
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-4 pt-2">
@@ -425,12 +504,198 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                                         {regCount} Colaborador{regCount !== 1 ? 'es' : ''} Cadastrado{regCount !== 1 ? 's' : ''}
                                     </span>
                                 </div>
-                                <div className={`w-2.5 h-2.5 rounded-full ${regCount > 0 ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingCompany(company);
+                                        }}
+                                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeletingCompanyId(company.id);
+                                            setShowDeleteModal(true);
+                                        }}
+                                        className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         </button>
                     );
                 })}
             </div>
+
+            {/* Edit Company Modal */}
+            {editingCompany && (
+                <div className="fixed inset-0 z-[200] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] w-full max-w-2xl overflow-hidden shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300">
+                        <div className="bg-slate-950 p-8 flex justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white">
+                                    <Edit2 className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Editar Cliente Corporativo</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{editingCompany.name}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setEditingCompany(null)} className="text-slate-500 hover:text-white transition-colors">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateCompany} className="p-10 space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Organização</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={editingCompany.name}
+                                        onChange={e => setEditingCompany({ ...editingCompany, name: e.target.value })}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sede / Endereço</label>
+                                    <input
+                                        type="text"
+                                        value={editingCompany.address || ''}
+                                        onChange={e => setEditingCompany({ ...editingCompany, address: e.target.value })}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contacto Oficial</label>
+                                    <input
+                                        type="tel"
+                                        value={editingCompany.phone || ''}
+                                        onChange={e => setEditingCompany({ ...editingCompany, phone: e.target.value })}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Plano de Serviço</label>
+                                    <select
+                                        value={editingCompany.plan}
+                                        onChange={e => setEditingCompany({ ...editingCompany, plan: e.target.value as any })}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none shadow-inner"
+                                    >
+                                        <option value="Basic">SSM Basic</option>
+                                        <option value="Premium">SSM Premium</option>
+                                        <option value="Enterprise">SSM Enterprise (Full)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="pt-6 flex gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingCompany(null)}
+                                    className="flex-1 py-5 bg-slate-50 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="flex-[2] py-5 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? <FileText className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-[200] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300">
+                        <div className="bg-red-600 p-8 text-white flex justify-between items-center">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                                    <AlertTriangle className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black uppercase tracking-tight">Confirmar Eliminação</h3>
+                                    <p className="text-[10px] font-bold text-red-100 uppercase tracking-widest mt-0.5">Esta ação não pode ser desfeita</p>
+                                </div>
+                            </div>
+                            <button onClick={() => {
+                                setShowDeleteModal(false);
+                                setSelectedDeletionReason('');
+                                setCustomDeletionReason('');
+                            }} className="text-red-100 hover:text-white transition-colors">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-10 space-y-6">
+                            <p className="text-slate-600 font-medium">
+                                Tem certeza que deseja apagar esta conta? O acesso será revogado imediatamente, mas os dados permanecerão arquivados para fins de relatório.
+                            </p>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo Profissional da Eliminação</label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {deletionReasons.map((reason) => (
+                                        <button
+                                            key={reason}
+                                            onClick={() => setSelectedDeletionReason(reason)}
+                                            className={`w-full px-6 py-4 rounded-2xl text-left text-sm font-bold transition-all border ${
+                                                selectedDeletionReason === reason
+                                                    ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
+                                                    : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            {reason}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {selectedDeletionReason === 'Outro' && (
+                                    <textarea
+                                        value={customDeletionReason}
+                                        onChange={(e) => setCustomDeletionReason(e.target.value)}
+                                        placeholder="Descreva o motivo..."
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all shadow-inner h-24 resize-none"
+                                    />
+                                )}
+                            </div>
+
+                            <div className="pt-4 flex gap-4">
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteModal(false);
+                                        setSelectedDeletionReason('');
+                                        setCustomDeletionReason('');
+                                    }}
+                                    className="flex-1 py-5 bg-slate-50 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleDeleteCompany}
+                                    disabled={isSubmitting || !selectedDeletionReason || (selectedDeletionReason === 'Outro' && !customDeletionReason)}
+                                    className="flex-[2] py-5 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-600/20 hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? <FileText className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                    Confirmar Desativação
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

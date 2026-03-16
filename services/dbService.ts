@@ -5,19 +5,108 @@ import { Company, Employee, AmbulanceState, Resource, EmergencyCase } from '../t
 export const dbService = {
     // Companies
     async getCompanies(): Promise<Company[]> {
-        const { data, error } = await supabase.from('companies').select('*');
+        const { data, error } = await supabase
+            .from('companies')
+            .select('*')
+            .eq('is_active', true);
         if (error) throw error;
-        return data as Company[];
+        return (data || []).map(c => ({
+            id: c.id,
+            name: c.name,
+            logo: c.logo,
+            color: c.color,
+            type: c.type,
+            plan: c.plan,
+            contractEnd: c.contract_end,
+            totalEmployees: c.total_employees,
+            address: c.address,
+            phone: c.phone
+        })) as Company[];
     },
 
     async saveCompany(company: Company) {
         const companyToSave = {
-            ...company,
-            id: company.id || `COMP-${Math.floor(Math.random() * 9000) + 1000}`
+            id: company.id || `COMP-${Math.floor(Math.random() * 9000) + 1000}`,
+            name: company.name,
+            logo: company.logo,
+            color: company.color,
+            type: company.type,
+            plan: company.plan,
+            contract_end: company.contractEnd,
+            total_employees: company.totalEmployees,
+            address: company.address,
+            phone: company.phone
         };
         const { data, error } = await supabase.from('companies').upsert(companyToSave);
         if (error) throw error;
+
+        // Log the creation
+        await this.logActivity('CREATE', 'company', companyToSave.id, { name: companyToSave.name });
+
         return data;
+    },
+
+    async updateCompany(id: string, updates: Partial<Company>) {
+        const companyToUpdate: any = {};
+        if (updates.name) companyToUpdate.name = updates.name;
+        if (updates.logo) companyToUpdate.logo = updates.logo;
+        if (updates.color) companyToUpdate.color = updates.color;
+        if (updates.type) companyToUpdate.type = updates.type;
+        if (updates.plan) companyToUpdate.plan = updates.plan;
+        if (updates.contractEnd) companyToUpdate.contract_end = updates.contractEnd;
+        if (updates.totalEmployees !== undefined) companyToUpdate.total_employees = updates.totalEmployees;
+        if (updates.address) companyToUpdate.address = updates.address;
+        if (updates.phone) companyToUpdate.phone = updates.phone;
+
+        const { data, error } = await supabase
+            .from('companies')
+            .update(companyToUpdate)
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Log the update
+        await this.logActivity('UPDATE', 'company', id, updates);
+
+        return data;
+    },
+
+    async deleteCompany(id: string, reason: string) {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
+
+        const { data, error } = await supabase
+            .from('companies')
+            .update({
+                is_active: false,
+                deletion_reason: reason,
+                deleted_at: new Date().toISOString(),
+                deleted_by: userId
+            })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Log the deletion
+        await this.logActivity('DELETE', 'company', id, { reason });
+
+        return data;
+    },
+
+    // Audit Logging
+    async logActivity(action: string, entityType: string, entityId: string, details: any) {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
+
+        const { error } = await supabase.from('activity_logs').insert({
+            user_id: userId,
+            action_type: action,
+            entity_type: entityType,
+            entity_id: entityId,
+            details: details
+        });
+
+        if (error) console.error("Error logging activity:", error);
     },
 
     // Profiles
@@ -42,11 +131,41 @@ export const dbService = {
     async getEmployees(): Promise<Employee[]> {
         const { data, error } = await supabase.from('employees').select('*');
         if (error) throw error;
-        return data as Employee[];
+        return (data || []).map(e => ({
+            id: e.id,
+            companyId: e.company_id,
+            name: e.name,
+            bi: e.bi,
+            age: e.age,
+            sex: e.sex,
+            bloodType: e.blood_type,
+            insurer: e.insurer,
+            policyNumber: e.policy_number,
+            policyValidity: e.policy_validity,
+            emergencyContact: e.emergency_contact,
+            allergies: e.allergies,
+            medications: e.medications,
+            medicalHistory: e.medical_history
+        })) as Employee[];
     },
 
     async saveEmployee(employee: Employee) {
-        const { data, error } = await supabase.from('employees').upsert(employee);
+        const { data, error } = await supabase.from('employees').upsert({
+            id: employee.id,
+            company_id: employee.companyId,
+            name: employee.name,
+            bi: employee.bi,
+            age: employee.age,
+            sex: employee.sex,
+            blood_type: employee.bloodType,
+            insurer: employee.insurer,
+            policy_number: employee.policyNumber,
+            policy_validity: employee.policyValidity,
+            emergency_contact: employee.emergencyContact,
+            allergies: employee.allergies,
+            medications: employee.medications,
+            medical_history: employee.medicalHistory
+        });
         if (error) throw error;
         return data;
     },
@@ -57,6 +176,7 @@ export const dbService = {
         if (error) throw error;
         return (data || []).map(amb => ({
             ...amb,
+            companyId: amb.company_id,
             currentPos: amb.current_pos as [number, number]
         })) as AmbulanceState[];
     },
@@ -82,11 +202,17 @@ export const dbService = {
     async getResources(): Promise<Resource[]> {
         const { data, error } = await supabase.from('resources').select('*');
         if (error) throw error;
-        return data as Resource[];
+        return (data || []).map(r => ({
+            ...r,
+            companyId: r.company_id
+        })) as Resource[];
     },
 
     async saveResource(resource: Resource) {
-        const { data, error } = await supabase.from('resources').upsert(resource);
+        const { data, error } = await supabase.from('resources').upsert({
+            ...resource,
+            company_id: resource.companyId
+        });
         if (error) throw error;
         return data;
     },
@@ -97,6 +223,8 @@ export const dbService = {
         if (error) throw error;
         return (data || []).map(inc => ({
             ...inc,
+            companyId: inc.company_id,
+            locationName: inc.location_name,
             coords: inc.coords as [number, number]
         })) as EmergencyCase[];
     },

@@ -316,8 +316,18 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
 
                                 <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between flex-wrap gap-4">
                                     <div className="flex gap-4">
-                                        <button className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2"><ClipboardList className="w-4 h-4" /> Ver Histórico Clínico</button>
-                                        <button className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all">Editar Ficha</button>
+                                        <button 
+                                            onClick={() => alert(`A carregar histórico clínico de: ${p.name}...`)}
+                                            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 active:scale-95"
+                                        >
+                                            <ClipboardList className="w-4 h-4" /> Ver Histórico Clínico
+                                        </button>
+                                        <button 
+                                            onClick={() => alert(`A abrir ficha técnica de: ${p.name}...`)}
+                                            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+                                        >
+                                            Editar Ficha
+                                        </button>
                                     </div>
                                     <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-emerald-100">
                                         <CheckCircle2 className="w-3.5 h-3.5" /> Última Validação: {new Date().toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}

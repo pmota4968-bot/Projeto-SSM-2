@@ -48,6 +48,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [trackingIncidentId, setTrackingIncidentId] = useState<string | null>(null);
   const [dispatchModalId, setDispatchModalId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dispatchSteps, setDispatchSteps] = useState<string[]>([]);
 
   const getNearbyAmbulances = (incidentCoords: [number, number]) => {
     return ambulances.map(amb => {
@@ -177,8 +178,18 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   'Triagem Inicial Concluída',
                   'Hospital de Destino Pré-avisado'
                 ].map(step => (
-                  <label key={step} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer">
-                    <input type="checkbox" className="rounded text-blue-600" />
+                  <label key={step} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer transition-all hover:bg-slate-50">
+                    <input 
+                      type="checkbox" 
+                      className="rounded text-blue-600 w-4 h-4" 
+                      checked={dispatchSteps.includes(step)}
+                      onChange={e => {
+                        const updated = e.target.checked 
+                          ? [...dispatchSteps, step]
+                          : dispatchSteps.filter(s => s !== step);
+                        setDispatchSteps(updated);
+                      }}
+                    />
                     <span className="text-[11px] font-bold text-slate-600">{step}</span>
                   </label>
                 ))}
@@ -202,55 +213,81 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <div className="lg:col-span-12 space-y-6">
           <h3 className="text-lg font-black text-slate-900 font-corporate uppercase tracking-tight flex items-center gap-3">Gestão Operacional Live <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div></h3>
           <div className="space-y-4">
-            {incidents.map((incident) => {
-              const company = companies.find(c => c.id === incident.companyId);
-              const isExpanded = expandedCaseId === incident.id;
+            {incidents.length > 0 ? (
+              incidents.map((incident) => {
+                const company = companies.find(c => c.id === incident.companyId);
+                const isExpanded = expandedCaseId === incident.id;
 
-              return (
-                <div key={incident.id} className={`bg-white rounded-[2rem] border border-slate-200 shadow-sm transition-all duration-500 overflow-hidden ${isExpanded ? 'ring-4 ring-blue-600/5 border-blue-100' : 'hover:border-blue-300'}`}>
-                  <div className="p-6 sm:p-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                      <div className="flex items-center gap-4 cursor-pointer" onClick={() => setExpandedCaseId(isExpanded ? null : incident.id)}>
-                        <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 overflow-hidden">
-                          {company ? <img src={company.logo} alt="Company Logo" className="w-full h-full object-cover" /> : <Activity className="w-7 h-7" />}
+                return (
+                  <div key={incident.id} className={`bg-white rounded-[2rem] border border-slate-200 shadow-sm transition-all duration-500 overflow-hidden ${isExpanded ? 'ring-4 ring-blue-600/5 border-blue-100' : 'hover:border-blue-300'}`}>
+                    <div className="p-6 sm:p-8">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div className="flex items-center gap-4 cursor-pointer" onClick={() => setExpandedCaseId(isExpanded ? null : incident.id)}>
+                          <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 overflow-hidden">
+                            {company ? <img src={company.logo} alt="Company Logo" className="w-full h-full object-cover" /> : <Activity className="w-7 h-7" />}
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-black text-slate-900 leading-none">{incident.patientName || 'Triagem Telefónica Pendente'}</h4>
+                            <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">#{incident.id} • {company?.name}</p>
+                          </div>
+                        </div>
+                        <div className="text-right text-xs font-black text-slate-300 flex items-center gap-2"><Clock className="w-4 h-4" /> {incident.timestamp}</div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                        <div className="space-y-4">
+                          <div className="flex gap-4">
+                            <MapPin className="w-5 h-5 text-slate-300 shrink-0" />
+                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Cenário Capturado por GPS</p><p className="text-sm font-bold text-slate-700">{incident.locationName}</p></div>
+                          </div>
+                          <div className="flex gap-4">
+                            <Stethoscope className="w-5 h-5 text-slate-300 shrink-0" />
+                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Descrição</p><p className="text-sm font-bold text-slate-700">{incident.type}</p></div>
+                          </div>
                         </div>
                         <div>
-                          <h4 className="text-xl font-black text-slate-900 leading-none">{incident.patientName || 'Triagem Telefónica Pendente'}</h4>
-                          <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">#{incident.id} • {company?.name}</p>
+                          {renderStatusBox(incident)}
                         </div>
                       </div>
-                      <div className="text-right text-xs font-black text-slate-300 flex items-center gap-2"><Clock className="w-4 h-4" /> {incident.timestamp}</div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                      <div className="space-y-4">
-                        <div className="flex gap-4">
-                          <MapPin className="w-5 h-5 text-slate-300 shrink-0" />
-                          <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Cenário Capturado por GPS</p><p className="text-sm font-bold text-slate-700">{incident.locationName}</p></div>
-                        </div>
-                        <div className="flex gap-4">
-                          <Stethoscope className="w-5 h-5 text-slate-300 shrink-0" />
-                          <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Descrição</p><p className="text-sm font-bold text-slate-700">{incident.type}</p></div>
-                        </div>
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <button onClick={() => setDispatchModalId(incident.id)} disabled={incident.ambulanceState !== undefined || incident.status === 'closed'} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg ${incident.ambulanceState || incident.status === 'closed' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'}`}><Send className="w-4 h-4" /> {incident.status === 'closed' ? 'Histórico de Missão' : (incident.ambulanceState ? 'Unidade em Missão' : 'Despachar Unidade SSM')}</button>
+                        <button
+                          onClick={() => onOpenComm?.(incident.id)}
+                          className="bg-[#E0F2FE] hover:bg-blue-100 text-blue-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                        >
+                          <PhoneCall className="w-4 h-4" /> Canais OC
+                        </button>
                       </div>
-                      <div>
-                        {renderStatusBox(incident)}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <button onClick={() => setDispatchModalId(incident.id)} disabled={incident.ambulanceState !== undefined || incident.status === 'closed'} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg ${incident.ambulanceState || incident.status === 'closed' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'}`}><Send className="w-4 h-4" /> {incident.status === 'closed' ? 'Histórico de Missão' : (incident.ambulanceState ? 'Unidade em Missão' : 'Despachar Unidade SSM')}</button>
-                      <button
-                        onClick={() => onOpenComm?.(incident.id)}
-                        className="bg-[#E0F2FE] hover:bg-blue-100 text-blue-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
-                      >
-                        <PhoneCall className="w-4 h-4" /> Canais OC
-                      </button>
                     </div>
                   </div>
+                );
+              })
+            ) : (
+              <div className="bg-white/40 border border-slate-200/50 backdrop-blur-sm rounded-[3rem] p-16 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 border-dashed">
+                <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner border border-blue-100/50 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Shield className="w-12 h-12 relative z-10" />
                 </div>
-              );
-            })}
+                <div className="space-y-3">
+                  <h4 className="text-3xl font-black text-slate-900 font-corporate tracking-tight uppercase">
+                    Bem vindo, {companies.find(c => c.id === currentUser?.companyId)?.name || 'Safety & Security Medical'}
+                  </h4>
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-md mx-auto leading-relaxed">
+                    Não existe nenhuma gestão de operação live no momento
+                  </p>
+                  <p className="text-slate-400/60 font-medium text-xs max-w-xs mx-auto">
+                    O Centro de Inteligência SSM está em prontidão operacional. Assim que uma operação for iniciada, os dados aparecerão aqui em tempo real.
+                  </p>
+                </div>
+                <div className="pt-6 flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-3 text-[9px] font-black text-emerald-500 uppercase tracking-[0.3em] bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
+                    Sistema em Prontidão
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

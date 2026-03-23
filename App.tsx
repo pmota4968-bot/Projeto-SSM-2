@@ -15,9 +15,11 @@ import CorporateClientsAdmin from './components/CorporateClientsAdmin';
 import EmployeeRegistration from './components/EmployeeRegistration';
 import UserProfileSettings from './components/UserProfileSettings';
 import AccountManagement from './components/AccountManagement';
+import AmbulanceProvidersAdmin from './components/AmbulanceProvidersAdmin';
+import ProviderFleetDashboard from './components/ProviderFleetDashboard';
 import Login from './components/Login';
 import {
-  EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, Employee, Company, Resource, CommunicationLog, OperationReport
+  EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, Driver, Employee, Company, Resource, CommunicationLog, OperationReport
 } from './types';
 import {
   Siren, PhoneCall, CheckCircle, X
@@ -33,6 +35,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [ambulances, setAmbulances] = useState<AmbulanceState[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [incidents, setIncidents] = useState<EmergencyCase[]>([]);
@@ -99,12 +102,13 @@ const App: React.FC = () => {
     // Fetch Initial Data
     const fetchData = async () => {
       try {
-        const [comps, emps, ambs, ress, incs] = await Promise.all([
+        const [comps, emps, ambs, ress, incs, drvs] = await Promise.all([
           dbService.getCompanies(),
           dbService.getEmployees(),
           dbService.getAmbulances(),
           dbService.getResources(),
-          dbService.getIncidents()
+          dbService.getIncidents(),
+          dbService.getDrivers()
         ]);
 
         // Merge database companies with constants to ensure UI always has data during transition
@@ -118,6 +122,7 @@ const App: React.FC = () => {
         setCompanies(mergedCompanies);
         setEmployees(emps);
         setAmbulances(ambs);
+        setDrivers(drvs);
         setResources(ress);
         setIncidents(incs);
       } catch (err) {
@@ -147,6 +152,65 @@ const App: React.FC = () => {
           setIncidents(prev => prev.map(inc =>
             inc.id === updatedInc.id ? { ...updatedInc, coords: updatedInc.coords as [number, number] } : inc
           ));
+        }
+      })
+      .subscribe();
+
+    // Set up real-time drivers listener
+    const driversSubscription = supabase
+      .channel('drivers_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, async (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newDrv = payload.new as any;
+          setDrivers(prev => [...prev, {
+            id: newDrv.id,
+            companyId: newDrv.company_id,
+            name: newDrv.name,
+            licenseNumber: newDrv.license_number,
+            phone: newDrv.phone,
+            status: newDrv.status,
+            createdAt: newDrv.created_at
+          }]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedDrv = payload.new as any;
+          setDrivers(prev => prev.map(d =>
+            d.id === updatedDrv.id ? {
+                ...d,
+                companyId: updatedDrv.company_id,
+                name: updatedDrv.name,
+                licenseNumber: updatedDrv.license_number,
+                phone: updatedDrv.phone,
+                status: updatedDrv.status
+            } : d
+          ));
+        } else if (payload.eventType === 'DELETE') {
+          setDrivers(prev => prev.filter(d => d.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    // Set up real-time ambulances listener
+    const ambulancesSubscription = supabase
+      .channel('ambulances_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ambulances' }, async (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newAmb = payload.new as any;
+          setAmbulances(prev => [...prev, {
+            ...newAmb,
+            companyId: newAmb.company_id,
+            currentPos: newAmb.current_pos as [number, number]
+          }]);
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedAmb = payload.new as any;
+          setAmbulances(prev => prev.map(amb =>
+            amb.id === updatedAmb.id ? {
+              ...updatedAmb,
+              companyId: updatedAmb.company_id,
+              currentPos: updatedAmb.current_pos as [number, number]
+            } : amb
+          ));
+        } else if (payload.eventType === 'DELETE') {
+          setAmbulances(prev => prev.filter(amb => amb.id !== payload.old.id));
         }
       })
       .subscribe();
@@ -200,6 +264,8 @@ const App: React.FC = () => {
       if (subscription) subscription.unsubscribe();
       gpsSubscription.unsubscribe();
       incidentsSubscription.unsubscribe();
+      driversSubscription.unsubscribe();
+      ambulancesSubscription.unsubscribe();
     };
   }, []);
 
@@ -207,7 +273,7 @@ const App: React.FC = () => {
     setCurrentUser(user);
     const corporateRoles = ['ADMIN_CLIENTE', 'RESPONSAVEL_EMERG_CLIENTE', 'COLABORADOR_RH'];
 
-    if (user.role === 'GESTOR_FROTA_AMB') setActiveTab('fleet');
+    if (user.role === 'GESTOR_FROTA_AMB') setActiveTab('my_fleet');
     else if (corporateRoles.includes(user.role)) setActiveTab('corporate_sos');
     else if (user.role === 'ADMIN_CLIENTE') setActiveTab('patients');
     else setActiveTab('dashboard');
@@ -409,6 +475,15 @@ const App: React.FC = () => {
             toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           />
           <div className="flex-1 overflow-hidden h-full">
+            {activeTab === 'providers' && (
+              <ProviderFleetDashboard
+                currentUser={currentUser}
+                ambulances={filteredAmbulances}
+                drivers={drivers}
+                onUpdateDrivers={setDrivers}
+                onLogout={handleLogout}
+              />
+            )}
             {activeTab === 'corporate_sos' && (
               <CorporateClientMode
                 adminName={currentUser.name}
@@ -518,6 +593,7 @@ const App: React.FC = () => {
             {activeTab === 'fleet' && (
               <FleetManagement
                 ambulances={filteredAmbulances}
+                drivers={drivers}
                 onAddAmbulance={(newAmb) => setAmbulances(prev => [newAmb, ...prev])}
               />
             )}
@@ -538,6 +614,23 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'providers' && <AnalyticsDashboard currentUser={currentUser} companies={filteredCompanies} />}
+            {activeTab === 'ambulance_providers' && (
+            <AmbulanceProvidersAdmin
+              companies={companies}
+              ambulances={ambulances}
+              drivers={drivers}
+              onUpdateDrivers={(updated) => setDrivers(updated)}
+            />
+          )}
+            {activeTab === 'my_fleet' && (
+              <ProviderFleetDashboard 
+                currentUser={currentUser} 
+                ambulances={filteredAmbulances} 
+                drivers={drivers}
+                onUpdateDrivers={setDrivers}
+                onLogout={handleLogout}
+              />
+            )}
             {activeTab === 'companies' && <CorporateClientsAdmin companies={filteredCompanies} employees={employees} onAddCompany={handleRegisterCompany} />}
 
             {activeTab === 'profile' && (

@@ -12,6 +12,7 @@ export type AuditActionType =
   | 'PROTOCOL_TRIAGE_GENERATED'
   | 'CORPORATE_SOS_TRIGGERED'
   | 'COMMUNICATION_LOGGED'
+  | 'MISSION_REJECTED_FIELD'
   | 'DATA_EXPORT_PDF'
   | 'DATA_EXPORT_EXCEL';
 
@@ -125,6 +126,7 @@ class AuditLogger {
       case 'AMBULANCE_PHASE_CHANGE': return `Alteração de estado da unidade para o incidente ${resourceId}`;
       case 'MISSION_FINALIZED': return `Missão concluída com sucesso. Relatório arquivado para ${resourceId}`;
       case 'MISSION_ACCEPTED_FIELD': return `Missão aceite via terminal de campo para o incidente ${resourceId}`;
+      case 'MISSION_REJECTED_FIELD': return `Missão rejeitada via terminal de campo pelo motorista para o incidente ${resourceId}`;
       case 'MISSION_FINALIZED_WITH_REPORT': return `Missão finalizada com submissão de relatório clínico para o incidente ${resourceId}`;
       case 'CORPORATE_SOS_TRIGGERED': return `Botão de pânico acionado por entidade cliente. Incidente ${resourceId}`;
       default: return `Ação do utilizador registada no sistema.`;

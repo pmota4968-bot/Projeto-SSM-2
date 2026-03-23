@@ -50,12 +50,22 @@ export interface Company {
   name: string;
   logo: string;
   color: string;
-  type: 'Banco' | 'Escola' | 'Empresa' | 'Outro';
+  type: 'Banco' | 'Escola' | 'Empresa' | 'Ambulância' | 'Outro';
   plan: 'Basic' | 'Premium' | 'Enterprise';
   contractEnd: string;
   totalEmployees: number;
   address?: string;
   phone?: string;
+}
+
+export interface Driver {
+  id: string;
+  companyId: string;
+  name: string;
+  licenseNumber: string;
+  phone: string;
+  status: 'available' | 'on_duty' | 'off_duty' | 'break';
+  createdAt?: string;
 }
 
 export interface Employee {

@@ -21,8 +21,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
     { id: 'corporate_sos', icon: ShieldAlert, label: 'EMERGÊNCIA', roles: ['ADMIN_CLIENTE', 'RESPONSAVEL_EMERG_CLIENTE', 'COLABORADOR_RH'] },
     { id: 'employee_registration', icon: UserPlus, label: 'CADASTRO', roles: ['ADMIN_CLIENTE', 'COLABORADOR_RH'] },
     { id: 'patients', icon: UserCircle, label: 'BASE MÉDICA', roles: ['ADMIN_CLIENTE'] },
-    { id: 'fleet', icon: Truck, label: 'GESTÃO DE FROTA', roles: ['ADMIN_SSM', 'GESTOR_FROTA_AMB'] },
     { id: 'companies', icon: Building2, label: 'CLIENTES', roles: ['ADMIN_SSM', 'GESTOR_RISCO'] },
+    { id: 'ambulance_providers', icon: Truck, label: 'PROVEDORES AMB', roles: ['ADMIN_SSM'] },
+    { id: 'my_fleet', icon: LayoutDashboard, label: 'A MINHA FROTA', roles: ['GESTOR_FROTA_AMB'] },
     { id: 'map', icon: Siren, label: 'EMERGÊNCIA', roles: ['ADMIN_SSM', 'OPERADOR_COORD'] },
     { id: 'providers', icon: Users, label: 'GESTÃO SSM', roles: ['ADMIN_SSM', 'GESTOR_RISCO'] },
   ].filter(item => item.roles.includes(userRole));

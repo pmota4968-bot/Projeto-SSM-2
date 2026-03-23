@@ -227,10 +227,16 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
                     </div>
 
                     <div className="mt-10 pt-8 border-t border-slate-100 space-y-3">
-                        <button className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all">
+                        <button 
+                            onClick={() => alert(`A iniciar chamada encriptada para: ${incident.ambulanceId || 'ALPHA-1'}...`)}
+                            className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
+                        >
                             <Phone className="w-4 h-4" /> Ligar para Viatura
                         </button>
-                        <button className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all">
+                        <button 
+                            onClick={() => alert('A carregar dados de telemetria em tempo real...')}
+                            className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
+                        >
                             <Activity className="w-4 h-4" /> Abrir Telemetria Médica
                         </button>
                     </div>

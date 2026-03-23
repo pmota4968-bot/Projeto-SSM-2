@@ -378,7 +378,12 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     ))}
                   </div>
                   <div className="p-8 text-center border-t border-slate-50">
-                    <button className="text-blue-600 text-[11px] font-black uppercase tracking-[0.2em] hover:underline">VER RELATÓRIO COMPLETO</button>
+                    <button 
+                      onClick={() => alert('A gerar resumo completo de ocorrências históricas em formato PDF...')}
+                      className="text-blue-600 text-[11px] font-black uppercase tracking-[0.2em] hover:underline"
+                    >
+                      VER RELATÓRIO COMPLETO
+                    </button>
                   </div>
                 </div>
               </div>

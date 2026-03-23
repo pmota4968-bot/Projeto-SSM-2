@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Activity, CheckCircle2, Clock, Info, Search,
   RotateCcw, Map as MapIcon, Grid, List,
@@ -19,6 +19,10 @@ interface ResourceManagementProps {
 const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, resources, companies = [], employees = [] }) => {
   const [view, setView] = useState<'map' | 'grid' | 'list'>('map');
   const [showStatusLegend, setShowStatusLegend] = useState(false);
+  const [filterType, setFilterType] = useState('Todos');
+  const [filterStatus, setFilterStatus] = useState('Todos');
+  const [filterLocation, setFilterLocation] = useState('Todas');
+  const [searchQuery, setSearchQuery] = useState('');
 
   React.useEffect(() => {
     if (window.innerWidth >= 768) {
@@ -29,12 +33,31 @@ const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, reso
   const activeIncidents = incidents.filter(i => i.status !== 'closed').length;
   const assignedAmbulances = incidents.filter(i => i.ambulanceId && i.status !== 'closed').length;
 
+  const filteredResources = useMemo(() => {
+    return resources.filter(res => {
+      const matchesSearch = res.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           res.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = filterType === 'Todos' || res.category === (filterType === 'Ambulância' ? 'ambulance' : filterType === 'Hospital' ? 'hospital' : 'team');
+      const matchesStatus = filterStatus === 'Todos' || res.status === (filterStatus === 'Disponível' ? 'available' : filterStatus === 'Atribuído' ? 'assigned' : 'offline');
+      const matchesLocation = filterLocation === 'Todas' || res.location.includes(filterLocation);
+      
+      return matchesSearch && matchesType && matchesStatus && matchesLocation;
+    });
+  }, [resources, searchQuery, filterType, filterStatus, filterLocation]);
+
   const stats = [
     { label: 'Incidentes Ativos', value: activeIncidents.toString(), icon: Activity, color: 'text-red-600', bg: 'bg-red-50' },
     { label: 'Ambulâncias Alocadas', value: assignedAmbulances.toString(), icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
     { label: 'Recursos Totais', value: resources.length.toString(), icon: Package, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Disponíveis', value: (resources.length - assignedAmbulances).toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterType('Todos');
+    setFilterStatus('Todos');
+    setFilterLocation('Todas');
+  };
 
   return (
     <div className="space-y-10">
@@ -60,32 +83,49 @@ const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, reso
           <input
             type="text"
             placeholder="Pesquisar recursos por nome, ID ou localização..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <select className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer">
-            <option>Todos os Tipos</option>
-            <option>Ambulância</option>
-            <option>Hospital</option>
-            <option>Equipa</option>
+          <select 
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer"
+          >
+            <option value="Todos">Todos os Tipos</option>
+            <option value="Ambulância">Ambulância</option>
+            <option value="Hospital">Hospital</option>
+            <option value="Equipa">Equipa</option>
           </select>
-          <select className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer">
-            <option>Todos os Estados</option>
-            <option>Disponível</option>
-            <option>Atribuído</option>
-            <option>Offline</option>
+          <select 
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer"
+          >
+            <option value="Todos">Todos os Estados</option>
+            <option value="Disponível">Disponível</option>
+            <option value="Atribuído">Atribuído</option>
+            <option value="Offline">Offline</option>
           </select>
-          <select className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer">
-            <option>Todas as Localizações</option>
-            <option>Maputo</option>
-            <option>Beira</option>
-            <option>Nampula</option>
+          <select 
+            value={filterLocation}
+            onChange={e => setFilterLocation(e.target.value)}
+            className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest outline-none hover:border-blue-400 transition-colors cursor-pointer"
+          >
+            <option value="Todas">Todas as Localizações</option>
+            <option value="Maputo">Maputo</option>
+            <option value="Beira">Beira</option>
+            <option value="Nampula">Nampula</option>
           </select>
         </div>
 
-        <button className="p-3 text-slate-400 hover:text-red-500 transition-all hover:bg-red-50 rounded-xl">
+        <button 
+          onClick={handleResetFilters}
+          className="p-3 text-slate-400 hover:text-red-500 transition-all hover:bg-red-50 rounded-xl active:scale-90"
+        >
           <RotateCcw className="w-5 h-5" />
         </button>
       </div>
@@ -162,7 +202,7 @@ const ResourceManagement: React.FC<ResourceManagementProps> = ({ incidents, reso
       </div>
 
       {/* 4. Grelha de Recursos (Solicitado pelo utilizador) */}
-      <ResourceGrid resources={resources} />
+      <ResourceGrid resources={filteredResources} />
     </div>
   );
 };

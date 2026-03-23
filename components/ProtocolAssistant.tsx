@@ -272,7 +272,10 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
                       <Shield className="w-5 h-5 text-blue-600" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 font-corporate">Resultado Governança SSM</span>
                     </div>
-                    <button className="text-slate-300 hover:text-slate-900 transition-all">
+                    <button 
+                      onClick={() => alert('A gerar relatório de triagem IA em PDF...')}
+                      className="text-slate-300 hover:text-slate-900 transition-all active:scale-95"
+                    >
                       <Printer className="w-4 h-4" />
                     </button>
                   </div>
@@ -496,7 +499,10 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
                   >
                     <Send className="w-4 h-4" /> Submeter para Operações
                   </button>
-                  <button className="flex-1 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3">
+                  <button 
+                    onClick={() => alert('A imprimir guia de marcha e protocolo de triagem...')}
+                    className="flex-1 py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 hover:bg-slate-800 active:scale-95 transition-all"
+                  >
                     <Printer className="w-4 h-4" /> Imprimir Guia
                   </button>
                 </div>

@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { Company, Employee, AmbulanceState, Resource, EmergencyCase } from '../types';
+import { Company, Employee, AmbulanceState, Resource, EmergencyCase, Driver, AdminUser } from '../types';
 
 export const dbService = {
     // Companies
@@ -116,13 +116,44 @@ export const dbService = {
         return data;
     },
 
+    async getCompanyManager(companyId: string): Promise<AdminUser | null> {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('company_id', companyId)
+            .eq('role', 'GESTOR_FROTA_AMB')
+            .maybeSingle();
+        
+        if (error) throw error;
+        if (!data) return null;
+
+        return {
+            id: data.id,
+            name: data.full_name,
+            role: data.role,
+            avatar: data.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.full_name)}&background=0f172a&color=fff`,
+            initials: data.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2),
+            username: data.username || data.email?.split('@')[0],
+            email: data.email,
+            phone: data.phone,
+            address: data.address,
+            dob: data.dob,
+            gender: data.gender,
+            companyId: data.company_id
+        } as AdminUser;
+    },
+
     async updateProfile(id: string, updates: any) {
-        const { data, error } = await supabase.from('profiles').update({
-            full_name: updates.name,
-            role: updates.role,
-            company_id: updates.companyId,
+        const payload: any = {
             updated_at: new Date().toISOString()
-        }).eq('id', id);
+        };
+        if (updates.name) payload.full_name = updates.name;
+        if (updates.role) payload.role = updates.role;
+        if (updates.companyId) payload.company_id = updates.companyId;
+        if (updates.phone) payload.phone = updates.phone;
+        if (updates.email) payload.email = updates.email;
+
+        const { data, error } = await supabase.from('profiles').update(payload).eq('id', id);
         if (error) throw error;
         return data;
     },
@@ -182,8 +213,7 @@ export const dbService = {
     },
 
     async saveAmbulance(ambulance: AmbulanceState & { imei?: string }) {
-        const { data, error } = await supabase.from('ambulances').upsert({
-            id: ambulance.id,
+        const payload: any = {
             plate: ambulance.plate,
             type: ambulance.type,
             current_pos: ambulance.currentPos,
@@ -193,7 +223,50 @@ export const dbService = {
             imei: ambulance.imei,
             capacity: ambulance.capacity,
             performance: ambulance.performance
-        });
+        };
+        
+        if (ambulance.id) {
+            payload.id = ambulance.id;
+        }
+
+        const { data, error } = await supabase.from('ambulances').upsert(payload);
+        if (error) throw error;
+        return data;
+    },
+
+    // Drivers
+    async getDrivers(companyId?: string): Promise<Driver[]> {
+        let query = supabase.from('drivers').select('*');
+        if (companyId) {
+            query = query.eq('company_id', companyId);
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        return (data || []).map(d => ({
+            id: d.id,
+            companyId: d.company_id,
+            name: d.name,
+            licenseNumber: d.license_number,
+            phone: d.phone,
+            status: d.status as any,
+            createdAt: d.created_at
+        }));
+    },
+
+    async saveDriver(driver: Partial<Driver>) {
+        const payload: any = {
+            company_id: driver.companyId,
+            name: driver.name,
+            license_number: driver.licenseNumber,
+            phone: driver.phone,
+            status: driver.status
+        };
+
+        if (driver.id) {
+            payload.id = driver.id;
+        }
+
+        const { data, error } = await supabase.from('drivers').upsert(payload);
         if (error) throw error;
         return data;
     },

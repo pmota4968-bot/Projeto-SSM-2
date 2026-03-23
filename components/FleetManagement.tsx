@@ -1,15 +1,15 @@
-
 import React, { useState } from 'react';
 import { Truck, Activity, Settings, Battery, Signal, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, X, Save, Smartphone, Gauge } from 'lucide-react';
 import { dbService } from '../services/dbService';
-import { AmbulanceState } from '../types';
+import { AmbulanceState, Driver } from '../types';
 
 interface FleetManagementProps {
   ambulances: AmbulanceState[];
+  drivers: Driver[];
   onAddAmbulance: (amb: AmbulanceState) => void;
 }
 
-const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, onAddAmbulance }) => {
+const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, onAddAmbulance }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newAmbulance, setNewAmbulance] = useState({
     id: '',
@@ -18,6 +18,7 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, onAddAmbu
     imei: '',
     capacity: 'Padrão'
   });
+  const [editingAmbulance, setEditingAmbulance] = useState<AmbulanceState | null>(null);
 
   const handleAddAmbulance = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,13 +51,27 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, onAddAmbu
     }
   };
 
+  const handleUpdateAmbulance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAmbulance) return;
+    try {
+      await dbService.saveAmbulance(editingAmbulance);
+      alert("Viatura atualizada com sucesso!");
+      setEditingAmbulance(null);
+      window.location.reload(); // Quick refresh to update list
+    } catch (error) {
+      console.error("Erro ao atualizar viatura:", error);
+      alert("Erro ao atualizar viatura.");
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Frota Ativa</p>
           <div className="flex items-end gap-3">
-            <h4 className="text-4xl font-black text-slate-900 tracking-tight">{ambulances.length}</h4>
+            <h4 className="text-4xl font-black text-slate-900 tracking-tight">{(ambulances || []).length}</h4>
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg mb-1">100% OPERACIONAL</span>
           </div>
         </div>
@@ -65,8 +80,11 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, onAddAmbu
           <h4 className="text-4xl font-black text-slate-900 tracking-tight">0</h4>
         </div>
         <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Consumo de Recursos</p>
-          <h4 className="text-4xl font-black text-slate-900 tracking-tight">24%</h4>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Equipa de Motoristas</p>
+          <div className="flex items-end gap-3">
+            <h4 className="text-4xl font-black text-slate-900 tracking-tight">{(drivers || []).length}</h4>
+            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg mb-1">REGISTADOS</span>
+          </div>
         </div>
       </div>
 
@@ -120,7 +138,12 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, onAddAmbu
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <button className="p-2 text-slate-300 hover:text-blue-600"><Settings className="w-4 h-4" /></button>
+                    <button 
+                      onClick={() => setEditingAmbulance(amb)}
+                      className="p-2 text-slate-300 hover:text-blue-600 transition-all active:scale-110"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -231,6 +254,111 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, onAddAmbu
                   className="flex-[2] py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
                 >
                   <Save className="w-4 h-4" /> Confirmar Registo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição */}
+      {editingAmbulance && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300">
+            <div className="bg-blue-600 p-8 text-white flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <Truck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tight">Editar Viatura</h3>
+                  <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">Ref: {editingAmbulance.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingAmbulance(null)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateAmbulance} className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ID da Unidade</label>
+                  <input
+                    disabled
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold opacity-50 cursor-not-allowed"
+                    value={editingAmbulance.id}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Placa / Matrícula</label>
+                  <input
+                    required
+                    type="text"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-blue-600 transition-all"
+                    value={editingAmbulance.plate}
+                    onChange={e => setEditingAmbulance({ ...editingAmbulance, plate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Unidade</label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none appearance-none cursor-pointer"
+                  value={editingAmbulance.type}
+                  onChange={e => setEditingAmbulance({ ...editingAmbulance, type: e.target.value as any })}
+                >
+                  <option value="Básica">Suporte Básico de Vida (SBV)</option>
+                  <option value="Avançada">Suporte Avançado de Vida (SAV)</option>
+                  <option value="Resgate">Unidade de Resgate</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Smartphone className="w-3 h-3" /> IMEI do Dispositivo
+                </label>
+                <input
+                  required
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-blue-600 transition-all"
+                  value={editingAmbulance.imei}
+                  onChange={e => setEditingAmbulance({ ...editingAmbulance, imei: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Gauge className="w-3 h-3" /> Capacidade de Resposta
+                </label>
+                <select
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none appearance-none cursor-pointer"
+                  value={editingAmbulance.capacity}
+                  onChange={e => setEditingAmbulance({ ...editingAmbulance, capacity: e.target.value })}
+                >
+                  <option value="Padrão">Capacidade Padrão (1 Paciente)</option>
+                  <option value="Dupla">Capacidade Dupla (2 Pacientes)</option>
+                  <option value="Múltipla">Múltiplas Vítimas (Triagem em Massa)</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingAmbulance(null)}
+                  className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" /> Atualizar Viatura
                 </button>
               </div>
             </form>

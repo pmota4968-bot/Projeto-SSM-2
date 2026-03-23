@@ -58,6 +58,8 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
       setIsSaving(false);
       showToast('success', 'Alterações guardadas com sucesso.');
       if (showCriticalModal) setShowCriticalModal(null);
+      // Retornar para a página principal após guardar
+      setTimeout(() => onClose(), 1000);
     }, 800);
   };
 
@@ -370,7 +372,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                               <p className="text-xs font-bold text-slate-400">Proteja a sua conta com um código extra via SMS ou App.</p>
                             </div>
                           </div>
-                          <button className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Ativar</button>
+                          <button onClick={() => showToast('success', 'Pedido de ativação de 2FA enviado.')} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest">Ativar</button>
                         </div>
 
                         <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
@@ -444,7 +446,11 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Frequência das Notificações</label>
                       <div className="grid grid-cols-3 gap-3">
                         {['imediata', 'resumo_diario', 'semanal'].map(freq => (
-                          <button key={freq} className={`py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${freq === 'imediata' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400'}`}>
+                          <button 
+                            key={freq} 
+                            onClick={() => showToast('success', `Frequência de notificações alterada para ${freq.replace('_', ' ')}.`)}
+                            className={`py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${freq === 'imediata' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400'}`}
+                          >
                             {freq.replace('_', ' ')}
                           </button>
                         ))}
@@ -485,11 +491,17 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                     <div className="pt-8 border-t border-slate-100">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Tema da Interface</label>
                       <div className="grid grid-cols-2 gap-4">
-                        <button className="flex items-center justify-center gap-3 p-6 bg-blue-50 border-2 border-blue-500 rounded-[2rem] text-blue-600 transition-all">
+                        <button 
+                          onClick={() => showToast('success', 'Tema claro ativado.')}
+                          className="flex items-center justify-center gap-3 p-6 bg-blue-50 border-2 border-blue-500 rounded-[2rem] text-blue-600 transition-all"
+                        >
                           <Sun className="w-6 h-6" />
                           <span className="text-xs font-black uppercase tracking-widest">Modo Claro</span>
                         </button>
-                        <button className="flex items-center justify-center gap-3 p-6 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-slate-400 opacity-60 hover:opacity-100 transition-all">
+                        <button 
+                          onClick={() => showToast('warning', 'O modo escuro estará disponível em breve.')}
+                          className="flex items-center justify-center gap-3 p-6 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-slate-400 opacity-60 hover:opacity-100 transition-all"
+                        >
                           <Moon className="w-6 h-6" />
                           <span className="text-xs font-black uppercase tracking-widest">Modo Escuro</span>
                         </button>

@@ -120,10 +120,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ currentUser, co
           <p className="text-slate-500 font-medium">Métricas abrangentes de relatórios e desempenho sob a sua jurisdição.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+          <button 
+            onClick={() => alert('A gerar e descarregar relatório analítico em PDF...')}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+          >
             <Download className="w-4 h-4" /> Exportar PDF
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg text-xs font-bold hover:bg-blue-800 transition-all shadow-md">
+          <button 
+            onClick={() => alert('A exportar métricas de desempenho para Excel (.xlsx)...')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg text-xs font-bold hover:bg-blue-800 transition-all shadow-md active:scale-95"
+          >
             <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
           </button>
         </div>
@@ -194,7 +200,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ currentUser, co
                     <code className="bg-slate-100 px-2 py-1 rounded text-[10px] font-black text-slate-400 border border-slate-200">{log.integrityHash}</code>
                   </td>
                   <td className="px-8 py-4 text-right">
-                    <button className="p-2 text-slate-300 hover:text-blue-600 transition-all"><Eye className="w-4 h-4" /></button>
+                    <button 
+                      onClick={() => alert(`Detalhes do Log:\nID: ${log.id}\nHora: ${new Date(log.timestamp).toLocaleString()}\nAção: ${log.action}\nDetalhes: ${log.details}\nIntegridade: ${log.integrityHash}`)}
+                      className="p-2 text-slate-300 hover:text-blue-600 transition-all active:scale-110"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               )) : (
@@ -259,8 +270,20 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ currentUser, co
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
-            <button className="bg-blue-700 text-white py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-md active:scale-95">Aplicar</button>
-            <button className="bg-white border border-slate-200 text-slate-600 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95">
+            <button 
+              onClick={() => alert('Filtros aplicados com sucesso ao dashboard analítico.')}
+              className="bg-blue-700 text-white py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-md active:scale-95"
+            >
+              Aplicar
+            </button>
+            <button 
+              onClick={() => {
+                setSortKey('timestamp');
+                setSortDirection('desc');
+                alert('Filtros e ordenação restaurados para o padrão.');
+              }}
+              className="bg-white border border-slate-200 text-slate-600 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
+            >
               <RotateCcw className="w-3.5 h-3.5" /> Reset
             </button>
           </div>

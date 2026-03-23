@@ -86,11 +86,17 @@ const ResourceGrid: React.FC<ResourceGridProps> = ({ resources }) => {
             )}
 
             <div className="flex items-center gap-3">
-              <button className="flex-1 bg-white border border-slate-200 text-slate-700 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+              <button 
+                onClick={() => alert(`Detalhes do Recurso: ${res.name}\nCategoria: ${res.category}\nStatus: ${res.status}\nLocalização: ${res.location}`)}
+                className="flex-1 bg-white border border-slate-200 text-slate-700 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95"
+              >
                 <Info className="w-3.5 h-3.5" /> Ver Detalhes
               </button>
               {res.status === 'available' && (
-                <button className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+                <button 
+                  onClick={() => alert(`A iniciar processo de atribuição para: ${res.name}...`)}
+                  className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95"
+                >
                   <Navigation className="w-3.5 h-3.5" /> Atribuir
                 </button>
               )}

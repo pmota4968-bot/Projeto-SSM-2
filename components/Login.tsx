@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // Added AlertCircle to imports
 import { ShieldCheck, Lock, Fingerprint, Smartphone, Key, User, Globe, ShieldAlert, Truck, Activity, AlertCircle } from 'lucide-react';
 import SSMLogo from './SSMLogo';
@@ -21,6 +21,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState<{ msg: string, code?: string } | null>(null);
   const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<AdminUser | null>(null);
+  const stepRef = useRef(step);
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -58,52 +63,41 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     let user: AdminUser | null = null;
 
-    if (quickUser) {
-      // Fallback para Mock Login (Quick Access)
-      user = quickUser;
-    } else {
-      // Real Supabase Auth
-      try {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({
-          email: input.includes('@') ? input : `${input.toLowerCase()}@ssm.mz`, // Fallback de email se não for email
-          password: password,
-        });
-
-        if (authError) throw authError;
-
-        if (data.user) {
-          // Buscar perfil do usuário no banco de dados
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Erro ao buscar perfil:', profileError);
-            // Mesmo sem perfil, podemos tentar usar o metadados do auth
-            user = {
-              id: data.user.id,
-              name: data.user.user_metadata.full_name || 'Utilizador',
-              role: data.user.user_metadata.role || 'USER',
-              companyId: data.user.user_metadata.company_id,
-              email: data.user.email || ''
-            } as AdminUser;
-          } else {
-            user = {
-              id: profile.id,
-              name: profile.full_name,
-              role: profile.role,
-              companyId: profile.company_id,
-              email: data.user.email || ''
-            } as AdminUser;
-          }
+    // Real Supabase Auth
+    try {
+      // Fail-safe timer: se não entrar em 15 segundos, resetar o estado
+      const failSafeTimer = setTimeout(() => {
+        if (stepRef.current === 'checking') {
+          setStep('form');
+          setError({ msg: 'O sistema demorou demasiado tempo a responder. Por favor, tente novamente.' });
         }
-      } catch (err: any) {
-        setStep('form');
-        setError({ msg: err.message || 'Erro ao autenticar no SSM.' });
-        return;
+      }, 15000);
+
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: input.includes('@') ? input : `${input.toLowerCase()}@ssm.mz`,
+        password: password,
+      });
+
+      clearTimeout(failSafeTimer);
+
+      if (authError) throw authError;
+
+      if (data.user) {
+        // Redução de redundância: não buscamos o perfil aqui.
+        // O App.tsx tratará disso via onAuthStateChange.
+        // Criamos um objeto básico para o feedback visual de Welcome.
+        user = {
+          id: data.user.id,
+          name: data.user.user_metadata?.full_name || 'Utilizador',
+          role: data.user.user_metadata?.role || 'USER',
+          companyId: data.user.user_metadata?.company_id,
+          email: data.user.email || ''
+        } as AdminUser;
       }
+    } catch (err: any) {
+      setStep('form');
+      setError({ msg: err.message || 'Erro ao autenticar no SSM.' });
+      return;
     }
 
     if (!user) {
@@ -201,7 +195,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Palavra-passe (Opcional para Demo)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Palavra-passe</label>
                   <div className="relative group">
                     <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
                     <input
@@ -210,6 +204,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-black focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-slate-300"
+                      required
                     />
                   </div>
                 </div>
@@ -221,27 +216,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <Fingerprint className="w-5 h-5" /> Entrar Agora
                 </button>
 
-                <div className="pt-4 border-t border-slate-100">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center">Atalhos de Perfil (Demo PDF)</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => handleLoginSubmit(undefined, ADMINS[1])} className="p-3 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-xl flex items-center gap-2 transition-all group">
-                      <Activity className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="text-[9px] font-black uppercase text-slate-600 group-hover:text-blue-700">Operador</span>
-                    </button>
-                    <button type="button" onClick={() => handleLoginSubmit(undefined, ADMINS[3])} className="p-3 bg-slate-50 hover:bg-red-50 border border-slate-100 rounded-xl flex items-center gap-2 transition-all group">
-                      <Truck className="w-3.5 h-3.5 text-red-600" />
-                      <span className="text-[9px] font-black uppercase text-slate-600 group-hover:text-red-700">Ambulância</span>
-                    </button>
-                    <button type="button" onClick={() => handleLoginSubmit(undefined, ADMINS[5])} className="p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-100 rounded-xl flex items-center gap-2 transition-all group">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-[9px] font-black uppercase text-slate-600 group-hover:text-emerald-700">Cliente</span>
-                    </button>
-                    <button type="button" onClick={() => handleLoginSubmit(undefined, ADMINS[0])} className="p-3 bg-slate-900 hover:bg-slate-800 border border-slate-950 rounded-xl flex items-center gap-2 transition-all group">
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="text-[9px] font-black uppercase text-white group-hover:text-blue-200">ADM-001</span>
-                    </button>
-                  </div>
-                </div>
               </form>
             )}
 
@@ -309,12 +283,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         <div className="mt-8 flex justify-center gap-8 opacity-40 grayscale group-hover:grayscale-0 transition-all">
           <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-white" />
-            <span className="text-[10px] font-black text-white uppercase tracking-widest font-corporate">DEMO MODE ON</span>
-          </div>
-          <div className="flex items-center gap-2">
             <Lock className="w-4 h-4 text-white" />
-            <span className="text-[10px] font-black text-white uppercase tracking-widest font-corporate">AES-256 Bit</span>
+            <span className="text-[10px] font-black text-white uppercase tracking-widest font-corporate">AES-256 Bit Encriptação</span>
           </div>
         </div>
       </div>

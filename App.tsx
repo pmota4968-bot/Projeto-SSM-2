@@ -33,6 +33,7 @@ import { dbService } from './services/dbService';
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+  const [currentDriver, setCurrentDriver] = useState<Driver | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [ambulances, setAmbulances] = useState<AmbulanceState[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -78,6 +79,22 @@ const App: React.FC = () => {
     }
   }, [webrtcState.incomingCall, activeCommIncidentId, incidents]);
 
+  useEffect(() => {
+    const fetchDriverData = async () => {
+      if (currentUser?.role === 'MOTORISTA_AMB') {
+        try {
+          const drv = await dbService.getDriverByAuthId(currentUser.id);
+          setCurrentDriver(drv);
+        } catch (err) {
+          console.error("Erro ao carregar dados do motorista:", err);
+        }
+      } else {
+        setCurrentDriver(null);
+      }
+    };
+    fetchDriverData();
+  }, [currentUser]);
+
   // Global SOS detection to trigger "Incoming Call" alert across all tabs
   useEffect(() => {
     const newIncidents = incidents.filter(
@@ -111,15 +128,7 @@ const App: React.FC = () => {
           dbService.getDrivers()
         ]);
 
-        // Merge database companies with constants to ensure UI always has data during transition
-        const mergedCompanies = [...INITIAL_COMPANIES];
-        comps.forEach(dbComp => {
-          const index = mergedCompanies.findIndex(c => c.id === dbComp.id);
-          if (index !== -1) mergedCompanies[index] = dbComp;
-          else mergedCompanies.push(dbComp);
-        });
-
-        setCompanies(mergedCompanies);
+        setCompanies(comps);
         setEmployees(emps);
         setAmbulances(ambs);
         setDrivers(drvs);
@@ -220,25 +229,38 @@ const App: React.FC = () => {
 
     try {
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`Auth event: ${event}`, session?.user?.id);
+        
         try {
           if (session?.user) {
-            // Fetch profile if user is logged in
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+            // Se já tivermos um usuário e for apenas um refresh, talvez não precise buscar de novo
+            // Mas para garantir consistência após login, buscamos.
+            
+            let profileData = null;
+            let profileError = null;
 
-            if (profile && !profileError) {
+            try {
+              const result = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              profileData = result.data;
+              profileError = result.error;
+            } catch (e) {
+              console.error("Erro crítico na query de perfil:", e);
+            }
+
+            if (profileData && !profileError) {
               setCurrentUser({
-                id: profile.id,
-                name: profile.full_name,
-                role: profile.role,
-                companyId: profile.company_id,
+                id: profileData.id,
+                name: profileData.full_name,
+                role: profileData.role,
+                companyId: profileData.company_id,
                 email: session.user.email || ''
               } as AdminUser);
             } else {
-              // Fallback to metadata
+              console.warn("Perfil não encontrado ou erro, usando metadados como fallback:", profileError);
               setCurrentUser({
                 id: session.user.id,
                 name: session.user.user_metadata?.full_name || 'Utilizador',
@@ -251,7 +273,7 @@ const App: React.FC = () => {
             setCurrentUser(null);
           }
         } catch (innerError) {
-          console.error("Error in auth state change handler:", innerError);
+          console.error("Erro no handler de mudança de estado de autenticação:", innerError);
           setCurrentUser(null);
         }
       });
@@ -433,7 +455,7 @@ const App: React.FC = () => {
 
   // MODO MOTORISTA
   if (currentUser.role === 'MOTORISTA_AMB') {
-    // Procura uma ambulância da empresa do motorista
+    // Procura uma ambulância da empresa do motorista ou usa a configurada no perfil do motorista
     const myAmbulance = ambulances.find(amb => amb.companyId === currentUser.companyId);
     const myIncident = incidents.find(i => i.ambulanceState?.id === myAmbulance?.id && i.status !== 'closed');
 
@@ -444,7 +466,7 @@ const App: React.FC = () => {
         incident={myIncident || null}
         onUpdateAmbulance={updateAmbulanceState}
         onUpdateStatus={updateIncidentStatus}
-        imei={myAmbulance?.imei}
+        imei={currentDriver?.imei || myAmbulance?.imei}
       />
     );
   }
@@ -588,6 +610,7 @@ const App: React.FC = () => {
                 companies={companies}
                 onStartTriage={handleStartTriage}
                 onOpenComm={setActiveCommIncidentId}
+                resources={resources}
               />
             )}
             {activeTab === 'fleet' && (

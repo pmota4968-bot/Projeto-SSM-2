@@ -26,13 +26,10 @@ interface DashboardOverviewProps {
   companies?: Company[];
   onStartTriage?: (companyName: string) => void;
   onOpenComm?: (incidentId: string) => void;
+  resources?: any[]; // Adicionado para hospitais
 }
 
-const HOSPITALS_DB = [
-  { name: 'Lenmed Maputo Private', coords: [-25.952, 32.598] as [number, number], type: 'Privado' },
-  { name: 'ICOR - Coração', coords: [-25.960, 32.590] as [number, number], type: 'Especializado' },
-  { name: 'Hospital Central Maputo', coords: [-25.975, 32.585] as [number, number], type: 'Público' }
-];
+// Removido HOSPITALS_DB fixo para usar recursos da base de dados
 
 const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   incidents,
@@ -42,7 +39,8 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   ambulances = [],
   companies = COMPANIES,
   onStartTriage,
-  onOpenComm
+  onOpenComm,
+  resources = []
 }) => {
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
   const [trackingIncidentId, setTrackingIncidentId] = useState<string | null>(null);
@@ -58,10 +56,21 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   };
 
   const getNearbyHospitals = (incidentCoords: [number, number]) => {
-    return HOSPITALS_DB.map(h => {
-      const dist = Math.sqrt(Math.pow(h.coords[0] - incidentCoords[0], 2) + Math.pow(h.coords[1] - incidentCoords[1], 2)) * 111;
-      return { ...h, distance: dist };
-    }).sort((a, b) => a.distance - b.distance);
+    return resources
+      .filter(r => r.category === 'hospital' && r.location)
+      .map(h => {
+        let coords: [number, number] = [0, 0];
+        try {
+          const parsed = JSON.parse(h.location);
+          if (Array.isArray(parsed)) coords = parsed as [number, number];
+        } catch {
+          // Fallback se não for JSON
+        }
+        const dist = Math.sqrt(Math.pow(coords[0] - incidentCoords[0], 2) + Math.pow(coords[1] - incidentCoords[1], 2)) * 111;
+        return { ...h, coords, distance: dist };
+      })
+      .filter(h => h.distance > 0)
+      .sort((a, b) => a.distance - b.distance);
   };
 
   const handleDispatch = (ambId: string) => {

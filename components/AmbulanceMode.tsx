@@ -82,9 +82,12 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
          webrtcService.current = new WebRTCService((stateUpdate) => {
             setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
          });
-         // ID fixo para facilidade de demonstração/teste ou dinâmico
-         // Aqui usamos ssm-amb-ALPHA-1 como padrão se não houver um ID dinâmico melhor
-         webrtcService.current.initialize(incident?.ambulanceState?.id ? `ssm-amb-${incident.ambulanceState.id}` : `ssm-amb-ALPHA-1`);
+         // Utilizar ID da ambulância ou um fallback baseado no IMEI ou nome do motorista para WebRTC
+         const pId = incident?.ambulanceState?.id 
+            ? `ssm-amb-${incident.ambulanceState.id}` 
+            : imei ? `ssm-amb-${imei}` : `ssm-amb-local-${adminName.replace(/\s+/g, '-')}`;
+         
+         webrtcService.current.initialize(pId);
       }
 
       return () => {
@@ -176,9 +179,14 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
                   const hospital = resources.find(r => r.category === 'hospital' && r.name === clinicalReport.hospitalName) 
                                  || resources.find(r => r.category === 'hospital'); // Fallback to first hospital
                   if (hospital && hospital.location) {
-                     // Assuming location is stored as "[lat, lng]" or handled by dbService
-                     // For now, let's assume it's a coord if it's a resource or use a dummy
-                     destination = [-25.965, 32.585]; // Dummy Hospital Coord (Maputo Central)
+                     // Tentar extrair coordenadas da string de localização ou usar campo específico se existir
+                     try {
+                        const parsed = JSON.parse(hospital.location);
+                        if (Array.isArray(parsed)) destination = parsed as [number, number];
+                     } catch {
+                        // Fallback se não for JSON, pode ser uma string descritiva
+                        console.warn("Localização do hospital não está em formato de coordenadas geográficas.");
+                     }
                      destName = hospital.name;
                   }
                } catch (err) {
@@ -270,14 +278,14 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    const handleAccept = () => {
       if (incident) {
          onUpdateAmbulance(incident.id, { phase: 'en_route_to_patient' });
-         auditLogger.log({ id: 'DRV-001', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_ACCEPTED_FIELD', incident.id);
+         auditLogger.log({ id: driverDetails?.id || 'UNKNOWN_DRV', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_ACCEPTED_FIELD', incident.id);
       }
    };
 
    const handleReject = () => {
       if (incident) {
          onUpdateAmbulance(incident.id, null);
-         auditLogger.log({ id: 'DRV-001', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_REJECTED_FIELD', incident.id);
+         auditLogger.log({ id: driverDetails?.id || 'UNKNOWN_DRV', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_REJECTED_FIELD', incident.id);
       }
    };
 
@@ -312,7 +320,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       onUpdateAmbulance(incident!.id, { phase: 'idle' }, fullReport);
       onUpdateStatus(incident!.id, 'closed');
       setShowConclusionModal(false);
-      auditLogger.log({ id: 'DRV-001', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_FINALIZED_WITH_REPORT', incident!.id);
+      auditLogger.log({ id: driverDetails?.id || 'UNKNOWN_DRV', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_FINALIZED_WITH_REPORT', incident!.id);
       alert("Operação Concluída. Relatório enviado para o Centro de Comando.");
    };
 
@@ -332,7 +340,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
       const log = {
          incidentId: incident.id,
-         senderId: 'DRV-001', // Local dummy ID
+         senderId: driverDetails?.id || 'UNKNOWN_DRV',
          senderName: adminName,
          senderRole: 'MOTORISTA_AMB',
          recipient: 'Central de Coordenação',

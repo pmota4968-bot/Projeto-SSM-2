@@ -248,9 +248,36 @@ export const dbService = {
             name: d.name,
             licenseNumber: d.license_number,
             phone: d.phone,
+            email: d.email,
+            imei: d.imei,
+            authUserId: d.auth_user_id,
             status: d.status as any,
             createdAt: d.created_at
         }));
+    },
+
+    async getDriverByAuthId(authUserId: string): Promise<Driver | null> {
+        const { data, error } = await supabase
+            .from('drivers')
+            .select('*')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) return null;
+
+        return {
+            id: data.id,
+            companyId: data.company_id,
+            name: data.name,
+            licenseNumber: data.license_number,
+            phone: data.phone,
+            email: data.email,
+            imei: data.imei,
+            authUserId: data.auth_user_id,
+            status: data.status as any,
+            createdAt: data.created_at
+        };
     },
 
     async saveDriver(driver: Partial<Driver>) {
@@ -259,6 +286,9 @@ export const dbService = {
             name: driver.name,
             license_number: driver.licenseNumber,
             phone: driver.phone,
+            email: driver.email,
+            imei: driver.imei,
+            auth_user_id: driver.authUserId,
             status: driver.status
         };
 

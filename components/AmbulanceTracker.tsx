@@ -19,11 +19,11 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
     const [eta, setEta] = useState(incident.ambulanceState?.eta || 8);
     const [phase, setPhase] = useState(incident.ambulanceState?.phase || 'en_route_to_patient');
 
-    // Posicionamento mockado para simulação
+    // Posicionamento dinâmico
     const patientPos: [number, number] = incident.coords;
-    const hospitalPos: [number, number] = [-25.952, 32.598]; // Lenmed Maputo
+    const hospitalPos: [number, number] = [-25.952, 32.598]; // Fallback para Lenmed Maputo se não houver nas props
     const [currentAmbPos, setCurrentAmbPos] = useState<[number, number]>(
-        incident.ambulanceState?.currentPos || [-25.965, 32.575]
+        incident.ambulanceState?.currentPos || patientPos
     );
 
     const markerRef = useRef<L.Marker | null>(null);
@@ -199,17 +199,12 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Equipa na Viatura</h4>
                             <div className="space-y-3">
                                 <div className="flex items-center gap-4 p-4 hover:bg-slate-50 rounded-2xl transition-colors border border-transparent hover:border-slate-100">
-                                    <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xs font-black">JC</div>
-                                    <div>
-                                        <p className="text-xs font-black text-slate-900">João Condestável</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Paramédico Sénior</p>
+                                    <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xs font-black">
+                                        {incident.ambulanceState?.driverName?.split(' ').map(n => n[0]).join('') || 'EQ'}
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-4 p-4 hover:bg-slate-50 rounded-2xl transition-colors border border-transparent hover:border-slate-100">
-                                    <div className="w-10 h-10 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center text-xs font-black">AM</div>
                                     <div>
-                                        <p className="text-xs font-black text-slate-900">António Mucavele</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Motorista D1</p>
+                                        <p className="text-xs font-black text-slate-900">{incident.ambulanceState?.driverName || 'Equipa de Turno'}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Equipa Médica SSM</p>
                                     </div>
                                 </div>
                             </div>

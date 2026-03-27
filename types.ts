@@ -64,6 +64,9 @@ export interface Driver {
   name: string;
   licenseNumber: string;
   phone: string;
+  email?: string;
+  imei?: string;
+  authUserId?: string;
   status: 'available' | 'on_duty' | 'off_duty' | 'break';
   createdAt?: string;
 }

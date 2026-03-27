@@ -45,16 +45,26 @@ const NetworkMap: React.FC<NetworkMapProps> = ({
     ambulances: L.LayerGroup;
   } | null>(null);
 
-  const providers = resources.map(res => ({
-    id: res.id,
-    type: res.category,
-    pos: (res.id === 'RES-001' ? [-25.965, 32.575] : [-25.952, 32.598]) as [number, number], // Mock positions if not in type
-    label: res.name,
-    address: res.location,
-    phone: '+258 84 000 0000',
-    status: res.status,
-    province: 'Maputo'
-  }));
+  const providers = resources.map(res => {
+    let coords: [number, number] = [-25.9692, 32.5732]; // Default
+    try {
+      if (res.location) {
+        const parsed = JSON.parse(res.location);
+        if (Array.isArray(parsed)) coords = parsed as [number, number];
+      }
+    } catch (e) {}
+
+    return {
+      id: res.id,
+      type: res.category,
+      pos: coords,
+      label: res.name,
+      address: res.location && !res.location.startsWith('[') ? res.location : (res.category === 'hospital' ? 'Unidade Hospitalar' : 'Unidade Móvel'),
+      phone: '+258 84 000 0000', // Manter como placeholder ou adicionar campo na DB futuramente
+      status: res.status,
+      province: 'Maputo'
+    };
+  });
 
   const setMapToNational = () => {
     if (!mapRef.current) return;

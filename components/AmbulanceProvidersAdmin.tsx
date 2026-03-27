@@ -30,7 +30,15 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
     const [activeTab, setActiveTab] = useState<'overview' | 'fleet' | 'drivers'>('overview');
 
     // Child form states
-    const [newDriver, setNewDriver] = useState({ name: '', licenseNumber: '', phone: '', status: 'available' as any });
+    const [newDriver, setNewDriver] = useState({ 
+        name: '', 
+        licenseNumber: '', 
+        phone: '', 
+        email: '', 
+        password: '', 
+        imei: '',
+        status: 'available' as any 
+    });
     const [newAmbulance, setNewAmbulance] = useState({ id: '', plate: '', type: 'Básica' as any, imei: '', capacity: 'Padrão' });
 
     useEffect(() => {
@@ -154,22 +162,52 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
         if (!selectedCompanyId) return;
         setIsSubmitting(true);
         try {
+            // 1. Create Auth User
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: newDriver.email,
+                password: newDriver.password,
+                options: {
+                    data: {
+                        full_name: newDriver.name,
+                        role: 'MOTORISTA_AMB',
+                        phone: newDriver.phone,
+                        company_id: selectedCompanyId,
+                    }
+                }
+            });
+
+            if (authError) throw authError;
+            if (!authData.user) throw new Error("Erro ao criar utilizador de autenticação.");
+
+            // 2. Save Driver Record linked to Auth User
             const driver: Partial<Driver> = {
                 companyId: selectedCompanyId,
                 name: newDriver.name,
                 licenseNumber: newDriver.licenseNumber,
                 phone: newDriver.phone,
+                email: newDriver.email,
+                imei: newDriver.imei,
+                authUserId: authData.user.id,
                 status: newDriver.status
             };
             await dbService.saveDriver(driver);
+
             alert("Motorista registado com sucesso!");
             setShowAddDriver(false);
-            setNewDriver({ name: '', licenseNumber: '', phone: '', status: 'available' });
+            setNewDriver({ 
+                name: '', 
+                licenseNumber: '', 
+                phone: '', 
+                email: '', 
+                password: '', 
+                imei: '', 
+                status: 'available' 
+            });
             const updated = await dbService.getDrivers();
             onUpdateDrivers(updated);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao salvar motorista:", error);
-            alert("Erro ao salvar motorista.");
+            alert(`Erro ao salvar motorista: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -687,6 +725,44 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                             className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
                                         />
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Login</label>
+                                        <input 
+                                            required 
+                                            type="email"
+                                            placeholder="Ex: joao@ssm.co.mz" 
+                                            value={newDriver.email} 
+                                            onChange={e => setNewDriver({...newDriver, email: e.target.value})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Palavra-passe</label>
+                                        <input 
+                                            required 
+                                            type="password"
+                                            placeholder="••••••••" 
+                                            value={newDriver.password} 
+                                            onChange={e => setNewDriver({...newDriver, password: e.target.value})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                        <Shield className="w-3 h-3" /> IMEI do Telemóvel (Para Rastreio)
+                                    </label>
+                                    <input 
+                                        required 
+                                        placeholder="Introduza o IMEI de 15 dígitos" 
+                                        value={newDriver.imei} 
+                                        onChange={e => setNewDriver({...newDriver, imei: e.target.value})} 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+                                    />
                                 </div>
 
                                 <div className="pt-4 flex gap-4">

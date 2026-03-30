@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
    Truck, CheckCircle, MapPin, Activity, LogOut,
    Bell, MessageSquare, Phone, Video, Send, X, PhoneOff,
-   Navigation, FileText, CheckCircle2, Hospital, Flag
+   Navigation, FileText, CheckCircle2, Hospital, Flag, Camera, Loader2
 } from 'lucide-react';
-import { EmergencyCase, AmbulanceState, OperationReport, Driver, CommunicationLog } from '../types';
+import { EmergencyCase, AmbulanceState, OperationReport, Driver, CommunicationLog, AdminUser } from '../types';
 import L from 'leaflet';
 import { auditLogger } from '../services/auditLogger';
 import { dbService } from '../services/dbService';
@@ -13,7 +12,7 @@ import { WebRTCService, WebRTCState } from '../services/webRTCService';
 
 interface AmbulanceModeProps {
    onLogout: () => void;
-   adminName: string;
+   user: AdminUser;
    incident: EmergencyCase | null;
    onUpdateAmbulance: (id: string, updates: Partial<AmbulanceState> | null, finalReport?: OperationReport) => void;
    onUpdateStatus: (id: string, status: 'active' | 'triage' | 'transit' | 'closed') => void;
@@ -22,12 +21,13 @@ interface AmbulanceModeProps {
 
 const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    onLogout,
-   adminName,
+   user,
    incident,
    onUpdateAmbulance,
    onUpdateStatus,
    imei
 }) => {
+   const adminName = user.name;
    const [timeLeft, setTimeLeft] = useState(30);
    const [showConclusionModal, setShowConclusionModal] = useState(false);
    const [clinicalReport, setClinicalReport] = useState<Partial<OperationReport>>({
@@ -42,6 +42,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    const [newMessage, setNewMessage] = useState('');
    const [routePolyline, setRoutePolyline] = useState<L.Polyline | null>(null);
    const [driverDetails, setDriverDetails] = useState<Driver | null>(null);
+   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
 
    // WebRTC State
    const [webrtcState, setWebrtcState] = useState<WebRTCState>({
@@ -67,15 +68,24 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    useEffect(() => {
       const fetchDriverDetails = async () => {
          try {
-            const drivers = await dbService.getDrivers();
-            const current = drivers.find(d => d.name === adminName);
-            if (current) setDriverDetails(current);
+            console.log("Procurando ficha de motorista para ID:", user.id);
+            const current = await dbService.getDriverByAuthId(user.id);
+            if (current) {
+               console.log("Ficha de motorista encontrada:", current);
+               setDriverDetails(current);
+            } else {
+               // Fallback: tentar por nome se não encontrar por ID de auth
+               console.warn("Ficha não encontrada por ID, tentando por nome:", adminName);
+               const drivers = await dbService.getDrivers();
+               const byName = drivers.find(d => d.name === adminName);
+               if (byName) setDriverDetails(byName);
+            }
          } catch (err) {
             console.error("Erro ao carregar detalhes do motorista:", err);
          }
       };
       fetchDriverDetails();
-   }, [adminName]);
+   }, [user.id, adminName]);
 
    useEffect(() => {
       if (!webrtcService.current) {
@@ -322,6 +332,65 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       setShowConclusionModal(false);
       auditLogger.log({ id: driverDetails?.id || 'UNKNOWN_DRV', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_FINALIZED_WITH_REPORT', incident!.id);
       alert("Operação Concluída. Relatório enviado para o Centro de Comando.");
+   };
+
+   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+         alert("A imagem deve ter menos de 2MB.");
+         return;
+      }
+
+      setIsUpdatingAvatar(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+         const base64String = reader.result as string;
+         try {
+            // 1. Atualizar na ficha de motorista (drivers)
+            if (driverDetails) {
+               const updated = { ...driverDetails, avatar: base64String };
+               await dbService.saveDriver(updated);
+               setDriverDetails(updated);
+            }
+            
+            // 2. Atualizar no perfil global (profiles) e Auth Metadata
+            await dbService.updateProfile(user.id, { avatar: base64String });
+            
+            // O App.tsx via handleUpdateUser normalmente faria o auth.updateUser, 
+            // mas como estamos aqui, vamos forçar uma atualização local se necessário 
+            // ou confiar que o re-fetch no login resolverá. 
+            // Para feedback imediato, já atualizamos o estado local.
+            
+            console.log("Avatar atualizado em todos os níveis.");
+         } catch (err) {
+            console.error("Erro ao atualizar avatar:", err);
+            alert("Erro ao atualizar avatar.");
+         } finally {
+            setIsUpdatingAvatar(false);
+         }
+      };
+      reader.readAsDataURL(file);
+   };
+
+   const updateDriverStatus = async (newStatus: Driver['status']) => {
+      if (driverDetails) {
+         try {
+            const updated = { ...driverDetails, status: newStatus };
+            // Atualizar na tabela drivers
+            await dbService.saveDriver(updated);
+            setDriverDetails(updated);
+            
+            // Sincronizar com o campo status da tabela profiles (se existir) ou apenas persistir no drivers
+            await dbService.updateDriverByAuthId(user.id, { status: newStatus });
+            
+            console.log(`Estado de serviço alterado para: ${newStatus}`);
+         } catch (err) {
+            console.error("Erro ao atualizar status:", err);
+            alert("Erro ao mudar estado de serviço.");
+         }
+      }
    };
 
    const handleAnswerCall = (video: boolean) => {
@@ -655,13 +724,28 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
          {showProfile && (
             <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95">
-                  <div className="bg-slate-900 p-8 text-white text-center relative">
-                     <button onClick={() => setShowProfile(false)} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-xl transition-all"><X className="w-6 h-6" /></button>
-                     <div className="w-24 h-24 bg-blue-600 rounded-[2rem] mx-auto flex items-center justify-center text-4xl font-black mb-4 shadow-2xl border-4 border-white">
-                        {adminName[0]}
+                  <div className="bg-slate-900 p-8 text-white text-center relative overflow-hidden">
+                     <div className="absolute inset-0 bg-gradient-to-b from-blue-600/20 to-transparent"></div>
+                     <button onClick={() => setShowProfile(false)} className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-xl transition-all z-10"><X className="w-6 h-6" /></button>
+                     
+                     <div className="relative w-32 h-32 mx-auto mb-4 group">
+                        <div className="w-full h-full bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-4xl font-black shadow-2xl border-4 border-white overflow-hidden relative">
+                           {isUpdatingAvatar ? (
+                              <Loader2 className="w-10 h-10 animate-spin text-white/50" />
+                           ) : (driverDetails?.avatar || user.avatar) ? (
+                              <img src={driverDetails?.avatar || user.avatar} className="w-full h-full object-cover" alt="Profile" />
+                           ) : (
+                              adminName[0]
+                           )}
+                        </div>
+                        <label className="absolute bottom-0 right-0 p-2 bg-blue-500 text-white rounded-xl shadow-lg border-2 border-white cursor-pointer hover:bg-emerald-500 transition-all z-20 hover:scale-110 active:scale-90 shadow-blue-500/40">
+                           <Camera className="w-4 h-4" />
+                           <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} disabled={isUpdatingAvatar} />
+                        </label>
                      </div>
-                     <h3 className="text-xl font-black uppercase tracking-tight">{adminName}</h3>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Motorista de Emergência</p>
+
+                     <h3 className="text-xl font-black uppercase tracking-tight relative z-10">{adminName}</h3>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 relative z-10">Motorista de Emergência</p>
                   </div>
 
                   <div className="p-8 space-y-6">
@@ -677,25 +761,31 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
                      </div>
 
                      <div className="space-y-4">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado de Serviço</p>
+                        <div className="flex items-center justify-between ml-1">
+                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Estado de Serviço</p>
+                           {driverDetails?.status && (
+                              <div className={`w-2 h-2 rounded-full animate-pulse ${
+                                 driverDetails.status === 'available' ? 'bg-emerald-500' : 
+                                 driverDetails.status === 'break' ? 'bg-amber-500' : 'bg-red-500'
+                              }`}></div>
+                           )}
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
-                           {['available', 'break', 'off_duty'].map(status => (
+                           {[
+                              { id: 'available', label: 'Disponível' },
+                              { id: 'break', label: 'Em Pausa' },
+                              { id: 'off_duty', label: 'Fora de Serviço' }
+                           ].map(status => (
                               <button 
-                                 key={status}
-                                 onClick={async () => {
-                                    if (driverDetails) {
-                                       const updated = { ...driverDetails, status: status as any };
-                                       await dbService.saveDriver(updated);
-                                       setDriverDetails(updated);
-                                    }
-                                 }}
+                                 key={status.id}
+                                 onClick={() => updateDriverStatus(status.id as any)}
                                  className={`p-4 rounded-2xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    driverDetails?.status === status 
+                                    driverDetails?.status === status.id 
                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20 scale-[1.02]' 
-                                       : 'bg-white border-slate-100 text-slate-400 hover:border-blue-200'
+                                       : 'bg-white border-slate-100 text-slate-400 hover:border-blue-200 hover:text-slate-600'
                                  }`}
                               >
-                                 {status === 'available' ? 'Disponível' : status === 'break' ? 'Em Pausa' : 'Fora de Serviço'}
+                                 {status.label}
                               </button>
                            ))}
                         </div>
@@ -703,9 +793,9 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
                      <button 
                         onClick={onLogout}
-                        className="w-full py-5 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-5 bg-red-50 text-red-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2 group shadow-sm active:scale-95"
                      >
-                        <LogOut className="w-4 h-4" /> Terminar Sessão
+                        <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Terminar Sessão
                      </button>
                   </div>
                </div>

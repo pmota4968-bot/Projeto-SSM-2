@@ -307,6 +307,7 @@ export const dbService = {
             imei: data.imei,
             authUserId: data.auth_user_id,
             status: data.status as any,
+            avatar: data.avatar_url,
             createdAt: data.created_at
         };
     },
@@ -337,7 +338,8 @@ export const dbService = {
         const payload: any = {};
         if (updates.name) payload.name = updates.name;
         if (updates.phone) payload.phone = updates.phone;
-        if (updates.avatar_url) payload.avatar_url = updates.avatar_url;
+        if (updates.avatar_url !== undefined) payload.avatar_url = updates.avatar_url;
+        if (updates.status) payload.status = updates.status;
 
         const { data, error } = await supabase
             .from('drivers')

@@ -499,7 +499,7 @@ const App: React.FC = () => {
 
     return (
       <AmbulanceMode
-        adminName={currentUser.name}
+        user={currentUser}
         onLogout={handleLogout}
         incident={myIncident || null}
         onUpdateAmbulance={updateAmbulanceState}

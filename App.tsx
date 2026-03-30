@@ -262,7 +262,15 @@ const App: React.FC = () => {
                 name: profileData.full_name || prev?.name,
                 role: profileData.role || prev?.role,
                 companyId: profileData.company_id || prev?.companyId,
-                avatar: profileData.avatar_url || prev?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.full_name || 'U')}&background=0f172a&color=fff`
+                avatar: profileData.avatar_url || prev?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.full_name || 'U')}&background=0f172a&color=fff`,
+                // Novos campos para persistência total
+                username: profileData.username || prev?.username,
+                phone: profileData.phone || prev?.phone,
+                idDocument: profileData.id_document || prev?.idDocument,
+                dob: profileData.dob || prev?.dob,
+                gender: profileData.gender || prev?.gender,
+                address: profileData.address || prev?.address,
+                preferences: profileData.preferences || prev?.preferences
               }) as AdminUser);
             }
           } catch (e) {
@@ -317,10 +325,16 @@ const App: React.FC = () => {
         // 1. Persistir no Perfil (DB)
         await dbService.updateProfile(currentUser.id, updates);
         
-        // 2. Sincronizar com Metadados da Auth (para resiliência total)
-        if (updates.avatar) {
+        // 2. Sincronizar com Metadados da Auth (para resiliência total e feedback instantâneo no login)
+        const metadataUpdates: any = {};
+        if (updates.name) metadataUpdates.full_name = updates.name;
+        if (updates.avatar) metadataUpdates.avatar_url = updates.avatar;
+        if (updates.role) metadataUpdates.role = updates.role;
+        if (updates.companyId) metadataUpdates.company_id = updates.companyId;
+
+        if (Object.keys(metadataUpdates).length > 0) {
           await supabase.auth.updateUser({
-            data: { avatar_url: updates.avatar }
+            data: metadataUpdates
           });
         }
         

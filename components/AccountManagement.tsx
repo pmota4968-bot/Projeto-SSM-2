@@ -11,6 +11,7 @@ import { UserRole, AdminUser, Company } from '../types';
 import { ADMINS } from '../constants';
 import { auditLogger } from '../services/auditLogger';
 import { supabase } from '../services/supabase';
+import { dbService } from '../services/dbService';
 
 const AccountManagement: React.FC<{ onClose: () => void, companies?: Company[] }> = ({ onClose, companies = [] }) => {
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
@@ -123,8 +124,12 @@ const AccountManagement: React.FC<{ onClose: () => void, companies?: Company[] }
 
         alert('Identidade criada com sucesso no Supabase! O utilizador já pode fazer login.');
       } else {
-        // Edit flow (updates state)
-        setAccounts(prev => prev.map(a => a.id === selectedUser?.id ? { ...a, ...formData } : a));
+        // Edit flow (updates both DB and state)
+        if (selectedUser) {
+          await dbService.updateProfile(selectedUser.id, formData);
+          setAccounts(prev => prev.map(a => a.id === selectedUser.id ? { ...a, ...(formData as AdminUser) } : a));
+          alert('Informações da conta atualizadas com sucesso na base de dados.');
+        }
       }
 
       setView('list');

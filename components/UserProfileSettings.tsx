@@ -480,7 +480,21 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                             </div>
                           </div>
                           <div className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={!!(formData.preferences?.notifications as any)?.[chan.id]} 
+                              onChange={e => setFormData({
+                                ...formData,
+                                preferences: {
+                                  ...(formData.preferences || (user.preferences as any)),
+                                  notifications: {
+                                    ...((formData.preferences?.notifications || user.preferences?.notifications) as any),
+                                    [chan.id]: e.target.checked
+                                  }
+                                }
+                              })}
+                            />
                             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                           </div>
                         </div>
@@ -493,8 +507,17 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                         {['imediata', 'resumo_diario', 'semanal'].map(freq => (
                           <button 
                             key={freq} 
-                            onClick={() => showToast('success', `Frequência de notificações alterada para ${freq.replace('_', ' ')}.`)}
-                            className={`py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${freq === 'imediata' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400'}`}
+                            onClick={() => setFormData({
+                              ...formData,
+                              preferences: {
+                                ...(formData.preferences || (user.preferences as any)),
+                                notifications: {
+                                  ...((formData.preferences?.notifications || user.preferences?.notifications) as any),
+                                  frequency: freq as any
+                                }
+                              }
+                            })}
+                            className={`py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${(formData.preferences?.notifications?.frequency || user.preferences?.notifications?.frequency) === freq ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400'}`}
                           >
                             {freq.replace('_', ' ')}
                           </button>
@@ -513,7 +536,17 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idioma do Sistema</label>
                         <div className="relative">
                           <Languages className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                          <select className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none">
+                          <select 
+                            value={formData.preferences?.language || user.preferences?.language || 'Português (PT)'}
+                            onChange={e => setFormData({
+                              ...formData,
+                              preferences: {
+                                ...(formData.preferences || (user.preferences as any)),
+                                language: e.target.value
+                              }
+                            })}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none"
+                          >
                             <option>Português (PT)</option>
                             <option>English (UK)</option>
                             <option>Português (BR)</option>
@@ -524,7 +557,17 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fuso Horário</label>
                         <div className="relative">
                           <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                          <select className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none">
+                          <select 
+                            value={formData.preferences?.timezone || user.preferences?.timezone || 'Maputo (GMT+2)'}
+                            onChange={e => setFormData({
+                              ...formData,
+                              preferences: {
+                                ...(formData.preferences || (user.preferences as any)),
+                                timezone: e.target.value
+                              }
+                            })}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none"
+                          >
                             <option>Maputo (GMT+2)</option>
                             <option>Lisboa (GMT+0)</option>
                             <option>Joanesburgo (GMT+2)</option>
@@ -537,15 +580,27 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Tema da Interface</label>
                       <div className="grid grid-cols-2 gap-4">
                         <button 
-                          onClick={() => showToast('success', 'Tema claro ativado.')}
-                          className="flex items-center justify-center gap-3 p-6 bg-blue-50 border-2 border-blue-500 rounded-[2rem] text-blue-600 transition-all"
+                          onClick={() => setFormData({
+                            ...formData,
+                            preferences: {
+                              ...(formData.preferences || (user.preferences as any)),
+                              theme: 'claro'
+                            }
+                          })}
+                          className={`flex items-center justify-center gap-3 p-6 rounded-[2rem] transition-all border-2 ${(formData.preferences?.theme || user.preferences?.theme) === 'claro' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-100 text-slate-400'}`}
                         >
                           <Sun className="w-6 h-6" />
                           <span className="text-xs font-black uppercase tracking-widest">Modo Claro</span>
                         </button>
                         <button 
-                          onClick={() => showToast('warning', 'O modo escuro estará disponível em breve.')}
-                          className="flex items-center justify-center gap-3 p-6 bg-slate-900 border-2 border-slate-800 rounded-[2rem] text-slate-400 opacity-60 hover:opacity-100 transition-all"
+                          onClick={() => setFormData({
+                            ...formData,
+                            preferences: {
+                              ...(formData.preferences || (user.preferences as any)),
+                              theme: 'escuro'
+                            }
+                          })}
+                          className={`flex items-center justify-center gap-3 p-6 rounded-[2rem] transition-all border-2 ${(formData.preferences?.theme || user.preferences?.theme) === 'escuro' ? 'bg-slate-900 border-slate-800 text-blue-400' : 'bg-slate-900 border-slate-800 text-slate-400 opacity-60 hover:opacity-100'}`}
                         >
                           <Moon className="w-6 h-6" />
                           <span className="text-xs font-black uppercase tracking-widest">Modo Escuro</span>

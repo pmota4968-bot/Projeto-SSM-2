@@ -153,11 +153,21 @@ export const dbService = {
         if (updates.phone) payload.phone = updates.phone;
         if (updates.email) payload.email = updates.email;
         if (updates.avatar_url) payload.avatar_url = updates.avatar_url;
+        
+        // Novos campos para persistência total
+        if (updates.username) payload.username = updates.username;
+        if (updates.idDocument) payload.id_document = updates.idDocument;
+        if (updates.dob) payload.dob = updates.dob;
+        if (updates.gender) payload.gender = updates.gender;
+        if (updates.address) payload.address = updates.address;
+        if (updates.preferences) payload.preferences = updates.preferences;
 
         // Se houver avatar, usamos o RPC para bypassar RLS se necessário
         if (updates.avatar) {
             const { error: rpcError } = await supabase.rpc('update_own_avatar', { avatar_text: updates.avatar });
-            if (rpcError) throw rpcError;
+            if (rpcError) {
+                console.warn("RPC update_own_avatar failed, falling back to direct update:", rpcError);
+            }
             payload.avatar_url = updates.avatar;
         }
 

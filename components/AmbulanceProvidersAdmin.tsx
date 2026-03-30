@@ -373,8 +373,12 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black">
-                                            {companyManager?.initials || 'GM'}
+                                        <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black overflow-hidden">
+                                            {companyManager?.avatar ? (
+                                                <img src={companyManager.avatar} alt={companyManager.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                companyManager?.initials || 'GM'
+                                            )}
                                         </div>
                                         <div>
                                             <p className="text-sm font-black text-slate-900">{companyManager?.name || 'Gestor de Frota'}</p>
@@ -545,7 +549,13 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                     companyDrivers.map(driver => (
                                         <div key={driver.id} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 group hover:border-red-200 transition-all">
                                             <div className="flex items-center gap-4 mb-4">
-                                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center font-black text-slate-900 border border-slate-200">{driver.name.charAt(0)}</div>
+                                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center font-black text-slate-900 border border-slate-200 overflow-hidden">
+                                                    {driver.avatar ? (
+                                                        <img src={driver.avatar} alt={driver.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        driver.name.charAt(0)
+                                                    )}
+                                                </div>
                                                 <div>
                                                     <p className="text-sm font-black text-slate-900">{driver.name}</p>
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{driver.licenseNumber}</p>

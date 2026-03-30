@@ -91,7 +91,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           name: data.user.user_metadata?.full_name || 'Utilizador',
           role: data.user.user_metadata?.role || 'USER',
           companyId: data.user.user_metadata?.company_id,
-          email: data.user.email || ''
+          email: data.user.email || '',
+          avatar: data.user.user_metadata?.avatar_url
         } as AdminUser;
       }
     } catch (err: any) {

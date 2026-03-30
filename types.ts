@@ -68,6 +68,7 @@ export interface Driver {
   imei?: string;
   authUserId?: string;
   status: 'available' | 'on_duty' | 'off_duty' | 'break';
+  avatar?: string;
   createdAt?: string;
 }
 
@@ -90,6 +91,7 @@ export interface Employee {
   allergies?: string[];
   medications?: string[];
   medicalHistory?: string;
+  avatar?: string;
 }
 
 export interface OperationReport {

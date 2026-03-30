@@ -64,8 +64,12 @@ const PatientManagement: React.FC<PatientManagementProps> = ({ employees, curren
                 <div className="flex flex-col lg:flex-row gap-10">
                    {/* Lado Esquerdo: Info Básica */}
                    <div className="flex items-start gap-6 lg:w-1/3">
-                      <div className="w-20 h-20 bg-slate-900 text-white rounded-3xl flex items-center justify-center text-3xl font-black shadow-2xl shrink-0">
-                         {p.name[0]}
+                      <div className="w-20 h-20 bg-slate-900 text-white rounded-3xl flex items-center justify-center text-3xl font-black shadow-2xl shrink-0 overflow-hidden">
+                         {p.avatar ? (
+                            <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" />
+                         ) : (
+                            p.name[0]
+                         )}
                       </div>
                       <div>
                          <h3 className="text-xl font-black text-slate-900 leading-tight mb-2">{p.name}</h3>

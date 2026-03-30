@@ -184,7 +184,8 @@ export const dbService = {
             emergencyContact: e.emergency_contact,
             allergies: e.allergies,
             medications: e.medications,
-            medicalHistory: e.medical_history
+            medicalHistory: e.medical_history,
+            avatar: e.avatar_url
         })) as Employee[];
     },
 
@@ -203,7 +204,8 @@ export const dbService = {
             emergency_contact: employee.emergencyContact,
             allergies: employee.allergies,
             medications: employee.medications,
-            medical_history: employee.medicalHistory
+            medical_history: employee.medicalHistory,
+            avatar_url: employee.avatar
         });
         if (error) throw error;
         return data;
@@ -260,6 +262,7 @@ export const dbService = {
             imei: d.imei,
             authUserId: d.auth_user_id,
             status: d.status as any,
+            avatar: d.avatar_url,
             createdAt: d.created_at
         }));
     },
@@ -297,7 +300,8 @@ export const dbService = {
             email: driver.email,
             imei: driver.imei,
             auth_user_id: driver.authUserId,
-            status: driver.status
+            status: driver.status,
+            avatar_url: driver.avatar
         };
 
         if (driver.id) {

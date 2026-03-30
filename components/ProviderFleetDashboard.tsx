@@ -377,8 +377,12 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                                 companyDrivers.map(driver => (
                                 <div key={driver.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-8 hover:shadow-2xl hover:border-red-200 transition-all relative group overflow-hidden">
                                      <div className="flex items-center gap-5 mb-8">
-                                        <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-black text-xl border border-slate-200 group-hover:bg-red-600 group-hover:text-white group-hover:border-red-500 transition-all">
-                                            {driver.name.charAt(0)}
+                                        <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-black text-xl border border-slate-200 group-hover:bg-red-600 group-hover:text-white group-hover:border-red-500 transition-all overflow-hidden">
+                                            {driver.avatar ? (
+                                                <img src={driver.avatar} alt={driver.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                driver.name.charAt(0)
+                                            )}
                                         </div>
                                         <div>
                                             <h4 className="text-lg font-black text-slate-900 leading-tight">{driver.name}</h4>

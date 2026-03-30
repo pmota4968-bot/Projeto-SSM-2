@@ -70,19 +70,49 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     if (file) {
       setIsUploading(true);
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        try {
-          // Guardar logo na DB (Base64)
-          setFormData(prev => ({ ...prev, avatar: base64String }));
-          onUpdateUser({ avatar: base64String }); // Update App state immediately
-          showToast('success', 'Foto de perfil atualizada com sucesso!');
-        } catch (error: any) {
-          console.error("Erro ao guardar avatar:", error);
-          showToast('error', `Erro ao guardar foto: ${error.message}`);
-        } finally {
-          setIsUploading(false);
-        }
+      reader.onloadend = () => {
+        const img = new Image();
+        img.src = reader.result as string;
+        img.onload = async () => {
+          // Criar canvas para redimensionar
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400; // Tamanho ideal para avatar
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Comprimir para JPEG com qualidade 0.7
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+          try {
+            // Guardar na DB
+            setFormData(prev => ({ ...prev, avatar: compressedBase64 }));
+            onUpdateUser({ avatar: compressedBase64 });
+            showToast('success', 'Foto de perfil atualizada e otimizada!');
+          } catch (error: any) {
+            console.error("Erro ao guardar avatar:", error);
+            showToast('error', `Erro ao guardar foto: ${error.message}`);
+          } finally {
+            setIsUploading(false);
+          }
+        };
       };
       reader.onerror = () => {
         showToast('error', 'Erro ao ler o ficheiro.');

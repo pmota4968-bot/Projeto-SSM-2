@@ -315,8 +315,10 @@ const App: React.FC = () => {
       try {
         await dbService.updateProfile(currentUser.id, updates);
         console.log("Perfil atualizado no Supabase com sucesso.");
-      } catch (err) {
+      } catch (err: any) {
         console.error("Erro ao persistir atualização de perfil:", err);
+        // Em um cenário real, poderíamos mostrar um toast global aqui
+        // alert(`Erro ao guardar perfil: ${err.message}`);
       }
     }
   };

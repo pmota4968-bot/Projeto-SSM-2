@@ -153,7 +153,13 @@ export const dbService = {
         if (updates.phone) payload.phone = updates.phone;
         if (updates.email) payload.email = updates.email;
         if (updates.avatar_url) payload.avatar_url = updates.avatar_url;
-        if (updates.avatar) payload.avatar_url = updates.avatar;
+
+        // Se houver avatar, usamos o RPC para bypassar RLS se necessário
+        if (updates.avatar) {
+            const { error: rpcError } = await supabase.rpc('update_own_avatar', { avatar_text: updates.avatar });
+            if (rpcError) throw rpcError;
+            payload.avatar_url = updates.avatar;
+        }
 
         const { data, error } = await supabase.from('profiles').update(payload).eq('id', id);
         if (error) throw error;

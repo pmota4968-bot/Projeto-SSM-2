@@ -52,17 +52,20 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     executeSave();
   };
 
-  const executeSave = () => {
+  const executeSave = async () => {
     setIsSaving(true);
-    // Simulação de delay de rede
-    setTimeout(() => {
-      onUpdateUser(formData);
+    try {
+      await onUpdateUser(formData);
       setIsSaving(false);
       showToast('success', 'Alterações guardadas com sucesso.');
       if (showCriticalModal) setShowCriticalModal(null);
       // Retornar para a página principal após guardar
       setTimeout(() => onClose(), 1000);
-    }, 800);
+    } catch (error: any) {
+      console.error("Erro ao guardar perfil:", error);
+      setIsSaving(false);
+      showToast('error', `Erro ao guardar: ${error.message}`);
+    }
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

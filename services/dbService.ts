@@ -171,8 +171,12 @@ export const dbService = {
             payload.avatar_url = updates.avatar;
         }
 
+        console.log(`Updating profile for ${id} with payload:`, payload);
         const { data, error } = await supabase.from('profiles').update(payload).eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.error("Error updating profile in DB:", error);
+            throw error;
+        }
         return data;
     },
 
@@ -320,6 +324,21 @@ export const dbService = {
 
         const { data, error } = await supabase.from('drivers').upsert(payload);
         if (error) throw error;
+        return data;
+    },
+
+    async updateDriverByAuthId(authUserId: string, updates: any) {
+        const payload: any = {};
+        if (updates.name) payload.name = updates.name;
+        if (updates.phone) payload.phone = updates.phone;
+        if (updates.avatar_url) payload.avatar_url = updates.avatar_url;
+
+        const { data, error } = await supabase
+            .from('drivers')
+            .update(payload)
+            .eq('auth_user_id', authUserId);
+            
+        if (error) console.error("Error updating driver record:", error);
         return data;
     },
 

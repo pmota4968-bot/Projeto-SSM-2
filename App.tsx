@@ -256,13 +256,18 @@ const App: React.FC = () => {
               .eq('id', session.user.id)
               .single();
 
-            if (profileData && !profileError) {
+            if (profileError) {
+              console.warn("Erro ao buscar perfil em segundo plano:", profileError);
+            }
+
+            if (profileData) {
+              console.log("Enriquecendo utilizador com dados do perfil:", profileData);
               setCurrentUser(prev => ({
                 ...prev,
                 name: profileData.full_name || prev?.name,
                 role: profileData.role || prev?.role,
                 companyId: profileData.company_id || prev?.companyId,
-                avatar: profileData.avatar_url || prev?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.full_name || 'U')}&background=0f172a&color=fff`,
+                avatar: profileData.avatar_url || prev?.avatar,
                 // Novos campos para persistência total
                 username: profileData.username || prev?.username,
                 phone: profileData.phone || prev?.phone,

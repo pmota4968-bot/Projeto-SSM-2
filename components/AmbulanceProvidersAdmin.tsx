@@ -692,7 +692,7 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                 </button>
                             </div>
 
-                            <form onSubmit={handleAddDriver} className="p-10 space-y-8">
+                            <form onSubmit={handleAddDriver} className="p-10 space-y-7">
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                                     <input 

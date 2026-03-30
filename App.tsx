@@ -323,14 +323,16 @@ const App: React.FC = () => {
 
   const handleUpdateUser = async (updates: Partial<AdminUser>) => {
     if (currentUser) {
+      console.log(`Iniciando atualização de perfil para ${currentUser.id}:`, updates);
       const updatedUser = { ...currentUser, ...updates };
       setCurrentUser(updatedUser);
 
       try {
-        // 1. Persistir no Perfil (DB)
+        // 1. Persistir no Perfil (DB) - Usando UPSERT agora para garantir criação de linha
         await dbService.updateProfile(currentUser.id, updates);
+        console.log("1/3: Perfil persistido no banco de dados.");
         
-        // 2. Sincronizar com Metadados da Auth (para resiliência total e feedback instantâneo no login)
+        // 2. Sincronizar com Metadados da Auth (para resiliência total no login)
         const metadataUpdates: any = {};
         if (updates.name) metadataUpdates.full_name = updates.name;
         if (updates.avatar) metadataUpdates.avatar_url = updates.avatar;
@@ -338,14 +340,27 @@ const App: React.FC = () => {
         if (updates.companyId) metadataUpdates.company_id = updates.companyId;
 
         if (Object.keys(metadataUpdates).length > 0) {
-          await supabase.auth.updateUser({
+          const { error: authError } = await supabase.auth.updateUser({
             data: metadataUpdates
           });
+          if (authError) console.warn("Aviso na atualização de metadados Auth:", authError);
+          else console.log("2/3: Metadados da Auth sincronizados.");
         }
         
-        console.log("Perfil e metadados atualizados com sucesso.");
+        // 3. Sincronização Adicional (Motoristas)
+        if (currentUser.role === 'MOTORISTA_AMB') {
+          console.log("Sincronizando record operacional de motorista...");
+          await dbService.updateDriverByAuthId(currentUser.id, {
+            name: updates.name,
+            phone: updates.phone,
+            avatar_url: updates.avatar
+          });
+          console.log("3/3: Ficha de motorista atualizada.");
+        }
+        
+        console.log("Persistência concluída com sucesso.");
       } catch (err: any) {
-        console.error("Erro ao persistir atualização de perfil:", err);
+        console.error("ERRO CRÍTICO NA PERSISTÊNCIA:", err);
       }
     }
   };

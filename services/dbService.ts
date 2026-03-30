@@ -171,12 +171,18 @@ export const dbService = {
             payload.avatar_url = updates.avatar;
         }
 
-        console.log(`Updating profile for ${id} with payload:`, payload);
-        const { data, error } = await supabase.from('profiles').update(payload).eq('id', id);
+        console.log(`Upserting profile for ${id} with payload:`, payload);
+        const { data, error, count } = await supabase
+            .from('profiles')
+            .upsert({ id, ...payload }, { onConflict: 'id' })
+            .select();
+            
         if (error) {
-            console.error("Error updating profile in DB:", error);
+            console.error("Error upserting profile in DB:", error);
             throw error;
         }
+        
+        console.log("Profile upsert result:", { data, count });
         return data;
     },
 

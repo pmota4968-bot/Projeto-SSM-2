@@ -74,10 +74,9 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
         const img = new Image();
         img.src = reader.result as string;
         img.onload = async () => {
-          // Criar canvas para redimensionar
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 400; // Tamanho ideal para avatar
-          const MAX_HEIGHT = 400;
+          const MAX_WIDTH = 200; // Reduzido para garantir que cabe nos metadados da Auth (~32KB)
+          const MAX_HEIGHT = 200;
           let width = img.width;
           let height = img.height;
 
@@ -98,14 +97,14 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // Comprimir para JPEG com qualidade 0.7
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          // Comprimir para JPEG com qualidade 0.4 (muito pequeno e eficiente)
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
 
           try {
-            // Guardar na DB
+            // Guardar na DB e na Auth Metadata
             setFormData(prev => ({ ...prev, avatar: compressedBase64 }));
-            onUpdateUser({ avatar: compressedBase64 });
-            showToast('success', 'Foto de perfil atualizada e otimizada!');
+            await onUpdateUser({ avatar: compressedBase64 });
+            showToast('success', 'Foto de perfil sincronizada com sucesso!');
           } catch (error: any) {
             console.error("Erro ao guardar avatar:", error);
             showToast('error', `Erro ao guardar foto: ${error.message}`);

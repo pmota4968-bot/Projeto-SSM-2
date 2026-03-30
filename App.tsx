@@ -242,7 +242,8 @@ const App: React.FC = () => {
             name: session.user.user_metadata?.full_name || 'Utilizador',
             role: session.user.user_metadata?.role || 'USER',
             companyId: session.user.user_metadata?.company_id,
-            email: session.user.email || ''
+            email: session.user.email || '',
+            avatar: session.user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.user_metadata?.full_name || 'U')}&background=0f172a&color=fff`
           };
           
           setCurrentUser(basicUser);
@@ -313,12 +314,19 @@ const App: React.FC = () => {
       setCurrentUser(updatedUser);
 
       try {
+        // 1. Persistir no Perfil (DB)
         await dbService.updateProfile(currentUser.id, updates);
-        console.log("Perfil atualizado no Supabase com sucesso.");
+        
+        // 2. Sincronizar com Metadados da Auth (para resiliência total)
+        if (updates.avatar) {
+          await supabase.auth.updateUser({
+            data: { avatar_url: updates.avatar }
+          });
+        }
+        
+        console.log("Perfil e metadados atualizados com sucesso.");
       } catch (err: any) {
         console.error("Erro ao persistir atualização de perfil:", err);
-        // Em um cenário real, poderíamos mostrar um toast global aqui
-        // alert(`Erro ao guardar perfil: ${err.message}`);
       }
     }
   };

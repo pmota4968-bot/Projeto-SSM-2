@@ -65,21 +65,30 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     }, 800);
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && user.id) {
+    if (file) {
       setIsUploading(true);
-      try {
-        const publicUrl = await dbService.uploadAvatar(user.id, file);
-        setFormData(prev => ({ ...prev, avatar: publicUrl }));
-        onUpdateUser({ avatar: publicUrl }); // Update App state immediately
-        showToast('success', 'Foto de perfil atualizada com sucesso!');
-      } catch (error: any) {
-        console.error("Erro ao carregar avatar:", error);
-        showToast('error', `Erro ao carregar foto: ${error.message}`);
-      } finally {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        try {
+          // Guardar logo na DB (Base64)
+          setFormData(prev => ({ ...prev, avatar: base64String }));
+          onUpdateUser({ avatar: base64String }); // Update App state immediately
+          showToast('success', 'Foto de perfil atualizada com sucesso!');
+        } catch (error: any) {
+          console.error("Erro ao guardar avatar:", error);
+          showToast('error', `Erro ao guardar foto: ${error.message}`);
+        } finally {
+          setIsUploading(false);
+        }
+      };
+      reader.onerror = () => {
+        showToast('error', 'Erro ao ler o ficheiro.');
         setIsUploading(false);
-      }
+      };
+      reader.readAsDataURL(file);
     }
   };
 

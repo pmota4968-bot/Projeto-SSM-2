@@ -160,27 +160,6 @@ export const dbService = {
         return data;
     },
 
-    async uploadAvatar(userId: string, file: File): Promise<string> {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-        // Update profile with new avatar URL
-        await this.updateProfile(userId, { avatar_url: publicUrl });
-
-        return publicUrl;
-    },
-
     // Employees
     async getEmployees(): Promise<Employee[]> {
         const { data, error } = await supabase.from('employees').select('*');

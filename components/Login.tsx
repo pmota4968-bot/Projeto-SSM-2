@@ -117,14 +117,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       } else {
         showWelcome(user);
       }
-    }, 1500);
+    }, 400);
   };
 
   const showWelcome = (user: AdminUser) => {
     setView('welcome');
     setStep('success');
     auditLogger.log(user, 'LOGIN_SUCCESS');
-    setTimeout(() => onLoginSuccess(user), 2500);
+    setTimeout(() => onLoginSuccess(user), 600);
   };
 
   const handleOtpChange = (index: number, value: string) => {

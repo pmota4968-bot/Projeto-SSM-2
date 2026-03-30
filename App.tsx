@@ -112,34 +112,38 @@ const App: React.FC = () => {
     prevIncidentsRef.current = incidents;
   }, [incidents]);
 
+  // Fetch Initial Data
+  const fetchData = useCallback(async () => {
+    try {
+      console.log("Sincronizando dados com o servidor...");
+      const [comps, emps, ambs, ress, incs, drvs] = await Promise.all([
+        dbService.getCompanies(),
+        dbService.getEmployees(),
+        dbService.getAmbulances(),
+        dbService.getResources(),
+        dbService.getIncidents(),
+        dbService.getDrivers()
+      ]);
+
+      setCompanies(comps);
+      setEmployees(emps);
+      setAmbulances(ambs);
+      setDrivers(drvs);
+      setResources(ress);
+      setIncidents(incs);
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Only fetch if session exists, or on mount
+    fetchData();
+  }, [fetchData, currentUser?.id]);
+
   useEffect(() => {
     // Audit log application start
     auditLogger.log({ id: 'SYSTEM', name: 'System', role: 'ADMIN_SSM' }, 'SYSTEM_START', 'INFO', 'Aplicação SSM Digital Command Center iniciada.');
-
-    // Fetch Initial Data
-    const fetchData = async () => {
-      try {
-        const [comps, emps, ambs, ress, incs, drvs] = await Promise.all([
-          dbService.getCompanies(),
-          dbService.getEmployees(),
-          dbService.getAmbulances(),
-          dbService.getResources(),
-          dbService.getIncidents(),
-          dbService.getDrivers()
-        ]);
-
-        setCompanies(comps);
-        setEmployees(emps);
-        setAmbulances(ambs);
-        setDrivers(drvs);
-        setResources(ress);
-        setIncidents(incs);
-      } catch (err) {
-        console.error("Erro ao carregar dados iniciais:", err);
-      }
-    };
-
-    fetchData();
 
     // Set up real-time GPS tracking listener
     const gpsSubscription = dbService.subscribeToGps((payload) => {
@@ -231,49 +235,38 @@ const App: React.FC = () => {
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log(`Auth event: ${event}`, session?.user?.id);
         
-        try {
-          if (session?.user) {
-            // Se já tivermos um usuário e for apenas um refresh, talvez não precise buscar de novo
-            // Mas para garantir consistência após login, buscamos.
-            
-            let profileData = null;
-            let profileError = null;
+        if (session?.user) {
+          // 1. IMEDIATO: Usar metadados para feedback instantâneo e desbloquear a UI
+          const basicUser: AdminUser = {
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || 'Utilizador',
+            role: session.user.user_metadata?.role || 'USER',
+            companyId: session.user.user_metadata?.company_id,
+            email: session.user.email || ''
+          };
+          
+          setCurrentUser(basicUser);
 
-            try {
-              const result = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-              profileData = result.data;
-              profileError = result.error;
-            } catch (e) {
-              console.error("Erro crítico na query de perfil:", e);
-            }
+          // 2. EM SEGUNDO PLANO: Enriquecer com dados do perfil se necessário
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
 
             if (profileData && !profileError) {
-              setCurrentUser({
-                id: profileData.id,
-                name: profileData.full_name,
-                role: profileData.role,
-                companyId: profileData.company_id,
-                email: session.user.email || ''
-              } as AdminUser);
-            } else {
-              console.warn("Perfil não encontrado ou erro, usando metadados como fallback:", profileError);
-              setCurrentUser({
-                id: session.user.id,
-                name: session.user.user_metadata?.full_name || 'Utilizador',
-                role: session.user.user_metadata?.role || 'USER',
-                companyId: session.user.user_metadata?.company_id,
-                email: session.user.email || ''
-              } as AdminUser);
+              setCurrentUser(prev => ({
+                ...prev,
+                name: profileData.full_name || prev?.name,
+                role: profileData.role || prev?.role,
+                companyId: profileData.company_id || prev?.companyId,
+              }) as AdminUser);
             }
-          } else {
-            setCurrentUser(null);
+          } catch (e) {
+            console.warn("Erro ao buscar perfil em segundo plano:", e);
           }
-        } catch (innerError) {
-          console.error("Erro no handler de mudança de estado de autenticação:", innerError);
+        } else {
           setCurrentUser(null);
         }
       });

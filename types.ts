@@ -20,15 +20,15 @@ export interface AdminUser {
   id: string;
   name: string;
   role: UserRole;
-  avatar: string;
-  initials: string;
-  username: string;
+  avatar?: string;
+  initials?: string;
+  username?: string;
   email: string;
-  phone: string;
-  address: string;
-  dob: string;
-  gender: 'M' | 'F' | 'Outro';
-  idDocument: string;
+  phone?: string;
+  address?: string;
+  dob?: string;
+  gender?: 'M' | 'F' | 'Outro';
+  idDocument?: string;
   companyId?: string;
   isFirstAccess?: boolean;
   preferences?: {

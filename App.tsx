@@ -261,6 +261,7 @@ const App: React.FC = () => {
                 name: profileData.full_name || prev?.name,
                 role: profileData.role || prev?.role,
                 companyId: profileData.company_id || prev?.companyId,
+                avatar: profileData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.full_name || 'U')}&background=0f172a&color=fff`
               }) as AdminUser);
             }
           } catch (e) {

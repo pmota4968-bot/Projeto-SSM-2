@@ -9,6 +9,7 @@ import {
   MessageSquare, Languages, Clock, Sun, Moon, ChevronRight
 } from 'lucide-react';
 import { AdminUser, UserRole, Company } from '../types';
+import { dbService } from '../services/dbService';
 
 interface UserProfileSettingsProps {
   user: AdminUser;
@@ -29,6 +30,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
   const [activeSettingsTab, setActiveSettingsTab] = useState<'seguranca' | 'notificacoes' | 'preferencias' | 'privacidade' | 'conta'>('seguranca');
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'warning', message: string } | null>(null);
   const [showCriticalModal, setShowCriticalModal] = useState<{ field: string, value: any } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState<AdminUser>(user);
@@ -63,16 +65,21 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
     }, 800);
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // For now, use a local URL for instant feedback
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, avatar: reader.result as string }));
-        showToast('success', 'Foto de perfil carregada (Aguardando guardar).');
-      };
-      reader.readAsDataURL(file);
+    if (file && user.id) {
+      setIsUploading(true);
+      try {
+        const publicUrl = await dbService.uploadAvatar(user.id, file);
+        setFormData(prev => ({ ...prev, avatar: publicUrl }));
+        onUpdateUser({ avatar: publicUrl }); // Update App state immediately
+        showToast('success', 'Foto de perfil atualizada com sucesso!');
+      } catch (error: any) {
+        console.error("Erro ao carregar avatar:", error);
+        showToast('error', `Erro ao carregar foto: ${error.message}`);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -573,9 +580,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
                           </div>
                           <button
                             onClick={triggerFileUpload}
-                            className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+                            disabled={isUploading}
+                            className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50"
                           >
-                            Upload Nova Foto
+                            {isUploading ? 'A carregar...' : 'Upload Nova Foto'}
                           </button>
                         </div>
 

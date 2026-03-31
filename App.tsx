@@ -172,23 +172,27 @@ const App: React.FC = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, async (payload) => {
         if (payload.eventType === 'INSERT') {
           const newInc = payload.new as any;
+          const ambState = newInc.ambulance_state ? (typeof newInc.ambulance_state === 'string' ? JSON.parse(newInc.ambulance_state) : newInc.ambulance_state) : undefined;
+          
           setIncidents(prev => [{
             ...newInc,
             companyId: newInc.company_id,
             locationName: newInc.location_name,
             patientName: newInc.patient_name,
-            ambulanceState: newInc.ambulance_state,
+            ambulanceState: ambState,
             coords: newInc.coords as [number, number]
           }, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedInc = payload.new as any;
+          const ambState = updatedInc.ambulance_state ? (typeof updatedInc.ambulance_state === 'string' ? JSON.parse(updatedInc.ambulance_state) : updatedInc.ambulance_state) : undefined;
+
           setIncidents(prev => prev.map(inc =>
             inc.id === updatedInc.id ? {
               ...updatedInc,
               companyId: updatedInc.company_id,
               locationName: updatedInc.location_name,
               patientName: updatedInc.patient_name,
-              ambulanceState: updatedInc.ambulance_state,
+              ambulanceState: ambState,
               coords: updatedInc.coords as [number, number]
             } : inc
           ));
@@ -211,6 +215,9 @@ const App: React.FC = () => {
             licenseNumber: newDrv.license_number,
             phone: newDrv.phone,
             status: newDrv.status,
+            authUserId: newDrv.auth_user_id,
+            imei: newDrv.imei,
+            imsi: newDrv.imsi,
             createdAt: newDrv.created_at
           }]);
         } else if (payload.eventType === 'UPDATE') {
@@ -222,7 +229,10 @@ const App: React.FC = () => {
                 name: updatedDrv.name,
                 licenseNumber: updatedDrv.license_number,
                 phone: updatedDrv.phone,
-                status: updatedDrv.status
+                status: updatedDrv.status,
+                authUserId: updatedDrv.auth_user_id,
+                imei: updatedDrv.imei,
+                imsi: updatedDrv.imsi
             } : d
           ));
         } else if (payload.eventType === 'DELETE') {
@@ -240,7 +250,9 @@ const App: React.FC = () => {
           setAmbulances(prev => [...prev, {
             ...newAmb,
             companyId: newAmb.company_id,
-            currentPos: newAmb.current_pos as [number, number]
+            currentPos: newAmb.current_pos as [number, number],
+            imei: newAmb.imei,
+            capacity: newAmb.capacity
           }]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedAmb = payload.new as any;
@@ -248,7 +260,9 @@ const App: React.FC = () => {
             amb.id === updatedAmb.id ? {
               ...updatedAmb,
               companyId: updatedAmb.company_id,
-              currentPos: updatedAmb.current_pos as [number, number]
+              currentPos: updatedAmb.current_pos as [number, number],
+              imei: updatedAmb.imei,
+              capacity: updatedAmb.capacity
             } : amb
           ));
         } else if (payload.eventType === 'DELETE') {

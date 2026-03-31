@@ -723,9 +723,15 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
 
                             <button 
                                 type="submit" 
-                                className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/30 flex items-center justify-center gap-3 hover:bg-blue-700 active:scale-95 transition-all"
+                                disabled={isSubmitting}
+                                className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-600/30 flex items-center justify-center gap-3 hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
                             >
-                                <CheckCircle2 className="w-5 h-5" /> Atualizar Viatura
+                                {isSubmitting ? (
+                                    <Activity className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <CheckCircle2 className="w-5 h-5" />
+                                )}
+                                Atualizar Viatura
                             </button>
                         </form>
                     </div>

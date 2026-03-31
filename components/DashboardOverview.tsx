@@ -246,6 +246,14 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
                         <div className="space-y-4">
                           <div className="flex gap-4">
+                            <Building2 className="w-5 h-5 text-slate-300 shrink-0" />
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Empresa Solicitante</p>
+                              <p className="text-sm font-bold text-slate-700">{company?.name || 'Cliente Particular'}</p>
+                              {company?.address && <p className="text-xs font-medium text-slate-500 mt-1">{company.address}</p>}
+                            </div>
+                          </div>
+                          <div className="flex gap-4">
                             <MapPin className="w-5 h-5 text-slate-300 shrink-0" />
                             <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Cenário Capturado por GPS</p><p className="text-sm font-bold text-slate-700">{incident.locationName}</p></div>
                           </div>

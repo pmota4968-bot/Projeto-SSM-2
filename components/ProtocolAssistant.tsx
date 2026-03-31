@@ -19,9 +19,10 @@ interface ProtocolAssistantProps {
   currentUser: AdminUser;
   onAddIncident?: (incident: EmergencyCase) => void;
   initialData?: { companyName?: string } | null;
+  onNavigate?: (tab: string) => void;
 }
 
-const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAddIncident, initialData }) => {
+const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAddIncident, initialData, onNavigate }) => {
   const [mode, setMode] = useState<TriageMode>('STRUCTURED_FLOW');
   const [scenario, setScenario] = useState('');
   const [loading, setLoading] = useState(false);
@@ -196,6 +197,9 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
 
     onAddIncident(newCase);
     alert('Caso submetido com sucesso para as operações em tempo-real.');
+    if (onNavigate) {
+      onNavigate('dashboard');
+    }
   };
 
   return (

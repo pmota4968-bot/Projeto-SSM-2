@@ -394,33 +394,56 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDispatch = (incidentId: string, ambId: string) => {
+  const handleDispatch = async (incidentId: string, ambId: string) => {
     const selectedAmb = ambulances.find(a => a.id === ambId)!;
+    const newState = { ...selectedAmb, phase: 'pending_accept', timestamps: { dispatched: new Date().toLocaleTimeString() } };
+    
+    // Update Optimistic Local State
     setIncidents(prev => prev.map(inc => {
       if (inc.id === incidentId) {
         return {
           ...inc,
           ambulanceId: ambId,
-          ambulanceState: { ...selectedAmb, phase: 'pending_accept', timestamps: { dispatched: new Date().toLocaleTimeString() } }
+          ambulanceState: newState
         };
       }
       return inc;
     }));
+    
     if (currentUser) auditLogger.log(currentUser, 'DISPATCH_AMBULANCE', incidentId, `Viatura: ${ambId}`);
+
+    // Persist to Supabase
+    try {
+      await dbService.dispatchAmbulance(incidentId, newState);
+    } catch (err) {
+      console.error("Erro ao gravar despacho na base de dados. Verifique a coluna 'ambulance_state'", err);
+    }
   };
 
-  const updateAmbulanceState = (id: string, updates: Partial<AmbulanceState> | null, finalReport?: OperationReport) => {
+  const updateAmbulanceState = async (id: string, updates: Partial<AmbulanceState> | null, finalReport?: OperationReport) => {
+    let newAmbulanceState: any = null;
+    
     setIncidents(prev => prev.map(inc => {
       if (inc.id === id) {
-        if (!updates) return { ...inc, ambulanceState: undefined };
+        if (!updates) {
+           newAmbulanceState = null;
+           return { ...inc, ambulanceState: undefined };
+        }
+        newAmbulanceState = { ...inc.ambulanceState!, ...updates };
         return {
           ...inc,
-          ambulanceState: { ...inc.ambulanceState!, ...updates },
+          ambulanceState: newAmbulanceState,
           report: finalReport ? finalReport : inc.report
         };
       }
       return inc;
     }));
+
+    try {
+       await dbService.dispatchAmbulance(id, newAmbulanceState);
+    } catch(err) {
+       console.error("Erro ao atualizar estado da ambulância na base de dados", err);
+    }
   };
 
   const updateIncidentStatus = (id: string, status: 'active' | 'triage' | 'transit' | 'closed') => {
@@ -705,6 +728,7 @@ const App: React.FC = () => {
                 currentUser={currentUser}
                 onAddIncident={(inc) => setIncidents([inc, ...incidents])}
                 initialData={triageInitialData}
+                onNavigate={setActiveTab}
               />
             )}
             {activeTab === 'providers' && <AnalyticsDashboard currentUser={currentUser} companies={filteredCompanies} />}

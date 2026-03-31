@@ -407,6 +407,19 @@ export const dbService = {
         return data;
     },
 
+    async dispatchAmbulance(incidentId: string, ambulanceState: any) {
+        // Envia o estado completo da ambulância como um JSONB para a coluna ambulance_state
+        const { data, error } = await supabase.from('incidents')
+            .update({ ambulance_state: ambulanceState })
+            .eq('id', incidentId);
+        
+        if (error) {
+            console.error("Error dispatching ambulance:", error);
+            throw error;
+        }
+        return data;
+    },
+
     // GPS Tracking
     async logGpsTrack(imei: string, coords: [number, number], speed?: number, bearing?: number) {
         const { error } = await supabase.from('gps_tracks').insert({

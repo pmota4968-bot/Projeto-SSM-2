@@ -53,7 +53,7 @@ const App: React.FC = () => {
   const [webrtcState, setWebrtcState] = useState<any>({ isConnected: false, incomingCall: null, activeCall: null });
 
   useEffect(() => {
-    if (currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'GESTOR_FROTA_AMB') {
+    if (currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'OPERADOR_COORD' || currentUser?.role === 'GESTOR_FROTA_AMB') {
       import('./services/webRTCService').then(({ WebRTCService }) => {
         if (!webrtcService.current) {
           webrtcService.current = new WebRTCService((stateUpdate) => {

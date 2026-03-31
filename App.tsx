@@ -159,12 +159,28 @@ const App: React.FC = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, async (payload) => {
         if (payload.eventType === 'INSERT') {
           const newInc = payload.new as any;
-          setIncidents(prev => [{ ...newInc, coords: newInc.coords as [number, number] }, ...prev]);
+          setIncidents(prev => [{
+            ...newInc,
+            companyId: newInc.company_id,
+            locationName: newInc.location_name,
+            patientName: newInc.patient_name,
+            ambulanceState: newInc.ambulance_state,
+            coords: newInc.coords as [number, number]
+          }, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedInc = payload.new as any;
           setIncidents(prev => prev.map(inc =>
-            inc.id === updatedInc.id ? { ...updatedInc, coords: updatedInc.coords as [number, number] } : inc
+            inc.id === updatedInc.id ? {
+              ...updatedInc,
+              companyId: updatedInc.company_id,
+              locationName: updatedInc.location_name,
+              patientName: updatedInc.patient_name,
+              ambulanceState: updatedInc.ambulance_state,
+              coords: updatedInc.coords as [number, number]
+            } : inc
           ));
+        } else if (payload.eventType === 'DELETE') {
+          setIncidents(prev => prev.filter(inc => inc.id !== payload.old.id));
         }
       })
       .subscribe();
@@ -560,13 +576,17 @@ const App: React.FC = () => {
                     coords: [-25.9680, 32.5710],
                     companyId: currentUser.companyId
                   };
+                  
+                  // Optimistic UI update so the client sees it immediately
+                  setIncidents(prev => [newInc, ...prev]);
+                  setActiveIncidentIdForClient(incidentId);
+
                   try {
                     await dbService.saveIncident(newInc);
-                    setActiveIncidentIdForClient(incidentId);
                   } catch (err) {
-                    console.error("Erro ao disparar SOS:", err);
-                    setIncidents(prev => [newInc, ...prev]);
-                    setActiveIncidentIdForClient(incidentId);
+                    console.error("Erro CRÍTICO ao gravar SOS na base de dados (RLS ou formato de id inválido):", err);
+                    alert("Atenção: A chamada SOS local ativou, mas não foi possível enviar aos servidores de coordenação. Por favor, ligue para a linha telefónica de emergência.");
+                    // Rollback on critical failure? For now keep it so client doesn't panic more, but they are warned
                   }
                 }}
                 onOpenChat={(id) => {

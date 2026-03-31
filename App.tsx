@@ -70,14 +70,27 @@ const App: React.FC = () => {
   }, [currentUser?.role]);
 
   useEffect(() => {
-    if (webrtcState.incomingCall && !activeCommIncidentId) {
-      // Se receber uma chamada e não houver incidente aberto, tentamos associar se houver um SOS recente
-      const recentSOS = incidents.find(i => i.status === 'active' && i.priority === EmergencyPriority.CRITICAL);
-      if (recentSOS) {
-        setIncomingCallIncident(recentSOS);
+    if (webrtcState.incomingCall && !activeCommIncidentId && !incomingCallIncident) {
+      // Se receber uma chamada, tentamos associar a um SOS recente
+      let recentSOS = incidents.find(i => i.status === 'active' && i.priority === EmergencyPriority.CRITICAL);
+      
+      if (!recentSOS) {
+        // Se a chamada WebRTC chegar antes do WebSocket (ou se o realtime falhar/inativo), cria-se um SOS temporário
+        console.warn("Chamada recebida mas incidente não encontrado na base de dados (esperando Realtime). Criando alerta local...");
+        recentSOS = {
+          id: `CALL-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'Chamada de Triagem WebRTC',
+          locationName: 'Localização Desconhecida',
+          status: 'active',
+          priority: EmergencyPriority.CRITICAL,
+          coords: [0,0],
+          companyId: ''
+        };
       }
+      setIncomingCallIncident(recentSOS);
     }
-  }, [webrtcState.incomingCall, activeCommIncidentId, incidents]);
+  }, [webrtcState.incomingCall, activeCommIncidentId, incidents, incomingCallIncident]);
 
   useEffect(() => {
     const fetchDriverData = async () => {
@@ -102,7 +115,7 @@ const App: React.FC = () => {
     );
 
     const sosIncident = newIncidents.find(
-      inc => inc.priority === EmergencyPriority.CRITICAL && inc.id.startsWith('SOS-')
+      inc => inc.status === 'active' && inc.priority === EmergencyPriority.CRITICAL && inc.id.startsWith('SOS-')
     );
 
     if (sosIncident) {

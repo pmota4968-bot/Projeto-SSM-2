@@ -403,8 +403,16 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
 
                                          <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{driver.status}</span>
+                                                <div className={`w-2 h-2 rounded-full ${
+                                                    driver.status === 'available' ? 'bg-emerald-500' : 
+                                                    driver.status === 'break' ? 'bg-orange-500' : 
+                                                    driver.status === 'on_duty' ? 'bg-blue-500' : 'bg-slate-400'
+                                                }`}></div>
+                                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                                                    {driver.status === 'available' ? 'Disponível' : 
+                                                     driver.status === 'break' ? 'Em Pausa' : 
+                                                     driver.status === 'on_duty' ? 'Em Serviço' : 'Fora de Serviço'}
+                                                </span>
                                             </div>
                                             <div className="flex gap-2">
                                                 <button onClick={() => setEditingDriver(driver)} className="p-2 text-slate-300 hover:text-red-600 transition-all"><Edit2 className="w-4 h-4" /></button>

@@ -172,13 +172,14 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
     };
 
     const handleDeleteDriver = async (id: string) => {
-        if (!confirm("Tem a certeza que deseja remover este motorista?")) return;
+        if (!confirm("Tem a certeza que deseja remover este motorista? Esta ação apagará definitivamente o login deste utilizador.")) return;
         try {
-            const { error } = await supabase.from('drivers').delete().eq('id', id);
-            if (error) throw error;
+            await dbService.deleteDriver(id);
             const updatedDrivers = await dbService.getDrivers();
             onUpdateDrivers(updatedDrivers);
+            alert("Motorista eliminado com sucesso!");
         } catch (error) {
+            console.error("Delete Error:", error);
             alert("Erro ao remover motorista.");
         }
     };

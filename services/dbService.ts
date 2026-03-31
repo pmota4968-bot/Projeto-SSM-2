@@ -350,6 +350,17 @@ export const dbService = {
         return data;
     },
 
+    async deleteDriver(driverId: string) {
+        // Usa a stored procedure para contornar as restrições de RLS no auth.users
+        const { error } = await supabase.rpc('delete_driver_user', { driver_id: driverId });
+        if (error) {
+            console.error("RPC delete_driver_user failed:", error);
+            // Fallback direto apenas para a tabela drivers (não apaga o Auth User se falhar no RPC)
+            const { error: fallbackError } = await supabase.from('drivers').delete().eq('id', driverId);
+            if (fallbackError) throw fallbackError;
+        }
+    },
+
     // Resources
     async getResources(): Promise<Resource[]> {
         const { data, error } = await supabase.from('resources').select('*');

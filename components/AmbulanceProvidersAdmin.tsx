@@ -227,13 +227,14 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
     };
 
     const handleDeleteDriver = async (id: string) => {
-        if (!confirm("Tem a certeza que deseja remover este motorista?")) return;
+        if (!confirm("Tem a certeza que deseja remover este motorista? Esta ação revogará permanentemente o seu acesso.")) return;
         try {
-            const { error } = await supabase.from('drivers').delete().eq('id', id);
-            if (error) throw error;
+            await dbService.deleteDriver(id);
             const updated = await dbService.getDrivers();
             onUpdateDrivers(updated);
+            alert("Motorista removido com sucesso!");
         } catch (error) {
+            console.error(error);
             alert("Erro ao eliminar motorista.");
         }
     };

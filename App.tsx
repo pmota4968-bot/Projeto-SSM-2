@@ -410,8 +410,20 @@ const App: React.FC = () => {
 
   const handleDispatch = async (incidentId: string, ambId: string) => {
     const selectedAmb = ambulances.find(a => a.id === ambId)!;
-    // Tenta encontrar o motorista associado a esta ambulância (pelo IMEI ou ID)
-    const assignedDriver = drivers.find(d => d.imei === selectedAmb.imei || d.id === selectedAmb.id);
+    
+    // 1. Tenta encontrar o motorista associado a esta ambulância (pelo IMEI ou ID)
+    let assignedDriver = drivers.find(d => 
+      (d.imei && d.imei === selectedAmb.imei) || 
+      (d.id === selectedAmb.id)
+    );
+
+    // 2. NOVO FALLBACK: Se não houver match direto, tenta o primeiro motorista disponível da mesma empresa
+    if (!assignedDriver) {
+      assignedDriver = drivers.find(d => 
+        d.companyId === selectedAmb.companyId && 
+        d.status === 'available'
+      );
+    }
 
     const newState = { 
       ...selectedAmb, 
@@ -453,6 +465,13 @@ const App: React.FC = () => {
            return { ...inc, ambulanceState: undefined };
         }
         newAmbulanceState = { ...inc.ambulanceState!, ...updates };
+
+        // Se for um motorista a atualizar, garanta que o ID dele fica gravado como quem "pegou" a ficha
+        if (currentUser.role === 'MOTORISTA_AMB' && !newAmbulanceState.driverId) {
+          newAmbulanceState.driverId = currentUser.id;
+          newAmbulanceState.driverName = currentUser.name;
+        }
+
         return {
           ...inc,
           ambulanceState: newAmbulanceState,
@@ -574,12 +593,16 @@ const App: React.FC = () => {
     const currentDriver = drivers.find(d => d.authUserId === currentUser.id);
     
     // Procura o incidente onde esta ambulância ou este motorista foi despachado
-    const myIncident = incidents.find(i => 
-      (i.ambulanceState?.id === currentDriver?.id || // Caso ID do motorista seja o mesmo ID na ficha da amb
-       i.ambulanceState?.imei === currentDriver?.imei || // Caso de match por IMEI
-       i.ambulanceState?.driverId === currentUser.id) && // Match direto pelo ID de Auth
-      i.status !== 'closed'
-    );
+    const myIncident = incidents.find(i => {
+      const ambState = i.ambulanceState as any;
+      if (!ambState || i.status === 'closed') return false;
+
+      return (
+        ambState.driverId === currentUser.id || // Match direto pelo ID de Auth
+        (ambState.imei && ambState.imei === currentDriver?.imei) || // Match por IMEI
+        (i.companyId === currentUser.companyId && !ambState.driverId) // BROADCAST para a empresa se não houver motorista fixo
+      );
+    });
 
     // Se não houver incidente, tentamos encontrar a ambulância padrão da empresa para inicializar o PeerJS
     const myAmbulance = ambulances.find(amb => amb.companyId === currentUser.companyId);

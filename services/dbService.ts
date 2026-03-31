@@ -388,6 +388,8 @@ export const dbService = {
             ...inc,
             companyId: inc.company_id,
             locationName: inc.location_name,
+            patientName: inc.patient_name,
+            ambulanceState: inc.ambulance_state,
             coords: inc.coords as [number, number]
         })) as EmergencyCase[];
     },

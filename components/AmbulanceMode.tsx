@@ -4,7 +4,7 @@ import {
    Bell, MessageSquare, Phone, Video, Send, X, PhoneOff,
    Navigation, FileText, CheckCircle2, Hospital, Flag, Camera, Loader2
 } from 'lucide-react';
-import { EmergencyCase, AmbulanceState, OperationReport, Driver, CommunicationLog, AdminUser } from '../types';
+import { EmergencyCase, AmbulanceState, OperationReport, Driver, CommunicationLog, AdminUser, Company } from '../types';
 import L from 'leaflet';
 import { auditLogger } from '../services/auditLogger';
 import { dbService } from '../services/dbService';
@@ -17,6 +17,7 @@ interface AmbulanceModeProps {
    onUpdateAmbulance: (id: string, updates: Partial<AmbulanceState> | null, finalReport?: OperationReport) => void;
    onUpdateStatus: (id: string, status: 'active' | 'triage' | 'transit' | 'closed') => void;
    imei?: string; // Passed from App.tsx
+   companies?: Company[];
 }
 
 const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
@@ -25,7 +26,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    incident,
    onUpdateAmbulance,
    onUpdateStatus,
-   imei
+   imei,
+   companies = []
 }) => {
    const adminName = user.name;
    const [timeLeft, setTimeLeft] = useState(30);
@@ -159,14 +161,25 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
    useEffect(() => {
       let timer: number;
-      if (incident?.ambulanceState?.phase === 'pending_accept' && timeLeft > 0) {
+      if (incident?.ambulanceState?.phase === 'pending_accept') {
+         // Alerta sonoro de emergência
+         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'); 
+         audio.loop = true;
+         audio.play().catch(e => console.log("Audio auto-play blocked"));
+
+         setTimeLeft(30); 
          timer = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+         
+         return () => {
+            clearInterval(timer);
+            audio.pause();
+         };
       } else if (timeLeft === 0 && incident?.ambulanceState?.phase === 'pending_accept') {
          onUpdateAmbulance(incident.id, null);
          alert("Timeout de Aceitação: O despacho foi removido e reatribuído.");
       }
       return () => clearInterval(timer);
-   }, [incident, timeLeft]);
+   }, [incident?.id, incident?.ambulanceState?.phase]);
 
    // Update Route on Map
    useEffect(() => {
@@ -456,6 +469,9 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
                      </div>
                      <h2 className="text-2xl font-black font-corporate uppercase tracking-tight">Solicitação de Despacho</h2>
                      <div className="bg-slate-50 w-full p-6 rounded-2xl border border-slate-100 my-8 text-left">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Empresa Solicitante</p>
+                        <p className="text-sm font-black text-blue-600 mb-3">{companies.find(c => c.id === incident.companyId)?.name || 'Cliente Corporativo'}</p>
+                        
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Destino do Alerta</p>
                         <p className="text-base font-black text-slate-900">{incident.locationName}</p>
                      </div>

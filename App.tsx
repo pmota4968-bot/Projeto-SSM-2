@@ -396,7 +396,16 @@ const App: React.FC = () => {
 
   const handleDispatch = async (incidentId: string, ambId: string) => {
     const selectedAmb = ambulances.find(a => a.id === ambId)!;
-    const newState = { ...selectedAmb, phase: 'pending_accept', timestamps: { dispatched: new Date().toLocaleTimeString() } };
+    // Tenta encontrar o motorista associado a esta ambulância (pelo IMEI ou ID)
+    const assignedDriver = drivers.find(d => d.imei === selectedAmb.imei || d.id === selectedAmb.id);
+
+    const newState = { 
+      ...selectedAmb, 
+      driverId: assignedDriver?.authUserId,
+      driverName: assignedDriver?.name,
+      phase: 'pending_accept', 
+      timestamps: { dispatched: new Date().toLocaleTimeString() } 
+    };
     
     // Update Optimistic Local State
     setIncidents(prev => prev.map(inc => {
@@ -404,7 +413,7 @@ const App: React.FC = () => {
         return {
           ...inc,
           ambulanceId: ambId,
-          ambulanceState: newState
+          ambulanceState: newState as any
         };
       }
       return inc;
@@ -414,9 +423,9 @@ const App: React.FC = () => {
 
     // Persist to Supabase
     try {
-      await dbService.dispatchAmbulance(incidentId, newState);
+       await dbService.dispatchAmbulance(incidentId, newState);
     } catch (err) {
-      console.error("Erro ao gravar despacho na base de dados. Verifique a coluna 'ambulance_state'", err);
+       console.error("Erro ao gravar despacho na base de dados:", err);
     }
   };
 
@@ -439,8 +448,11 @@ const App: React.FC = () => {
       return inc;
     }));
 
+     // Sincronizar com a base de dados para que outros vejam em tempo-real (incluindo o motorista no outro lado)
     try {
-       await dbService.dispatchAmbulance(id, newAmbulanceState);
+       if (newAmbulanceState) {
+          await dbService.dispatchAmbulance(id, newAmbulanceState);
+       }
     } catch(err) {
        console.error("Erro ao atualizar estado da ambulância na base de dados", err);
     }
@@ -545,9 +557,18 @@ const App: React.FC = () => {
 
   // MODO MOTORISTA
   if (currentUser.role === 'MOTORISTA_AMB') {
-    // Procura uma ambulância da empresa do motorista ou usa a configurada no perfil do motorista
+    const currentDriver = drivers.find(d => d.authUserId === currentUser.id);
+    
+    // Procura o incidente onde esta ambulância ou este motorista foi despachado
+    const myIncident = incidents.find(i => 
+      (i.ambulanceState?.id === currentDriver?.id || // Caso ID do motorista seja o mesmo ID na ficha da amb
+       i.ambulanceState?.imei === currentDriver?.imei || // Caso de match por IMEI
+       i.ambulanceState?.driverId === currentUser.id) && // Match direto pelo ID de Auth
+      i.status !== 'closed'
+    );
+
+    // Se não houver incidente, tentamos encontrar a ambulância padrão da empresa para inicializar o PeerJS
     const myAmbulance = ambulances.find(amb => amb.companyId === currentUser.companyId);
-    const myIncident = incidents.find(i => i.ambulanceState?.id === myAmbulance?.id && i.status !== 'closed');
 
     return (
       <AmbulanceMode
@@ -557,6 +578,7 @@ const App: React.FC = () => {
         onUpdateAmbulance={updateAmbulanceState}
         onUpdateStatus={updateIncidentStatus}
         imei={currentDriver?.imei || myAmbulance?.imei}
+        companies={companies}
       />
     );
   }

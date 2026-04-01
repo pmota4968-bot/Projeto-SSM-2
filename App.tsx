@@ -868,7 +868,7 @@ const App: React.FC = () => {
                   Linha Prioritária SSM
                 </div>
                 <p className="text-base font-bold text-slate-500 mt-4 leading-relaxed text-center">
-                  <span className="text-slate-900 font-black">{filteredCompanies.find(c => c.id === incomingCallIncident.companyId)?.name || 'Cliente Corporativo'}</span> está a solicitar apoio imediato.
+                  <span className="text-slate-900 font-black">{companies.find(c => c.id === incomingCallIncident.companyId)?.name || 'Cliente Corporativo'}</span> está a solicitar apoio imediato.
                 </p>
               </div>
 
@@ -899,9 +899,9 @@ const App: React.FC = () => {
             <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-md h-24 rounded-3xl mb-4 mr-4' : 'w-full max-w-5xl h-[85vh] rounded-[3rem]'}`}>
               <EmergencyCommunication
                 incidentId={activeCommIncidentId}
-                company={filteredCompanies.find(c => c.id === filteredIncidents.find(i => i.id === activeCommIncidentId)?.companyId)}
+                company={companies.find(c => c.id === incidents.find(i => i.id === activeCommIncidentId)?.companyId)}
                 currentUser={currentUser}
-                incident={filteredIncidents.find(i => i.id === activeCommIncidentId)}
+                incident={incidents.find(i => i.id === activeCommIncidentId)}
                 onStartTriage={handleStartTriage}
                 isMinimized={commIsMinimized}
                 onToggleMinimize={() => setCommIsMinimized(!commIsMinimized)}

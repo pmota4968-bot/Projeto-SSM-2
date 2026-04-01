@@ -899,22 +899,25 @@ const App: React.FC = () => {
         )}
 
         {/* Global Emergency Communication Modal / Floating Window */}
-        {activeCommIncidentId && (
-          <div className={`fixed inset-0 z-[150] transition-all duration-500 flex ${commIsMinimized ? 'pointer-events-none items-end justify-end p-8' : 'bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4'}`}>
-            <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-md h-24 rounded-3xl mb-4 mr-4' : 'w-full max-w-5xl h-[85vh] rounded-[3rem]'}`}>
-              <EmergencyCommunication
-                incidentId={activeCommIncidentId}
-                company={companies.find(c => c.id === incidents.find(i => i.id === activeCommIncidentId)?.companyId)}
-                currentUser={currentUser}
-                incident={incidents.find(i => i.id === activeCommIncidentId)}
-                onStartTriage={handleStartTriage}
-                isMinimized={commIsMinimized}
-                onToggleMinimize={() => setCommIsMinimized(!commIsMinimized)}
-                onClose={() => setActiveCommIncidentId(null)}
-              />
+        {activeCommIncidentId && (() => {
+          const resolvedCommIncident = incidents.find(i => i.id === activeCommIncidentId) || (incomingCallIncident?.id === activeCommIncidentId ? incomingCallIncident : null);
+          return (
+            <div className={`fixed inset-0 z-[150] transition-all duration-500 flex ${commIsMinimized ? 'pointer-events-none items-end justify-end p-8' : 'bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4'}`}>
+              <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-md h-24 rounded-3xl mb-4 mr-4' : 'w-full max-w-5xl h-[85vh] rounded-[3rem]'}`}>
+                <EmergencyCommunication
+                  incidentId={activeCommIncidentId}
+                  company={companies.find(c => c.id === resolvedCommIncident?.companyId)}
+                  currentUser={currentUser}
+                  incident={resolvedCommIncident}
+                  onStartTriage={handleStartTriage}
+                  isMinimized={commIsMinimized}
+                  onToggleMinimize={() => setCommIsMinimized(!commIsMinimized)}
+                  onClose={() => setActiveCommIncidentId(null)}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     );
   } catch (renderError) {

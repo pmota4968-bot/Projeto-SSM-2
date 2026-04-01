@@ -110,7 +110,7 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome Completo</label>
-                <input required name="name" value={formData.name} onChange={handleInputChange} type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="Ex: João Manuel" />
+                <input required name="name" value={formData.name} onChange={handleInputChange} type="text" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none" placeholder="Ex: Nome do Funcionário" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">BI / Passaporte</label>

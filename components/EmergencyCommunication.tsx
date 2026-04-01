@@ -175,7 +175,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
 
     let targetId = '';
     if (activeChannel === 'AMBULANCIA') {
-      targetId = `ssm-amb-${incident?.ambulanceId || 'ALPHA-1'}`; 
+      targetId = `ssm-amb-${incident?.ambulanceId || incidentId}`; 
     } else if (activeChannel === 'CLIENTE') {
       if (!company?.id) {
         alert("Erro: ID da empresa não encontrado para iniciar chamada.");

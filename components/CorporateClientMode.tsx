@@ -357,9 +357,30 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                   <Activity className="w-6 h-6 text-red-500" />
                   <h3 className="text-2xl font-black text-slate-900 uppercase font-corporate tracking-tight">Atendimentos em Curso</h3>
                 </div>
-                <div className="bg-white rounded-[2rem] border-2 border-dashed border-slate-200 p-24 flex flex-col items-center justify-center text-center">
-                  <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4 border border-slate-100"><Info className="w-6 h-6" /></div>
-                  <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhuma emergência ativa.</p>
+                <div className="space-y-4">
+                  {incidents.filter(i => i.companyId === currentUser.companyId && i.status !== 'resolved').length > 0 ? (
+                    incidents
+                      .filter(i => i.companyId === currentUser.companyId && i.status !== 'resolved')
+                      .map((inc, i) => (
+                        <div key={i} className="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-sm flex items-center justify-between group hover:border-blue-300 transition-all cursor-pointer" onClick={() => setActiveIncidentId(inc.id)}>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                              <Activity className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-900">{inc.type}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">{inc.timestamp} • {inc.locationName}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                        </div>
+                      ))
+                  ) : (
+                    <div className="bg-white rounded-[2rem] border-2 border-dashed border-slate-200 p-16 flex flex-col items-center justify-center text-center">
+                      <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4 border border-slate-100"><Info className="w-6 h-6" /></div>
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhuma emergência ativa.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -374,21 +395,27 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">TIPO</span>
                   </div>
                   <div className="divide-y divide-slate-50">
-                    {[
-                      { id: '#98321', date: '30/12/2025', name: 'Richard Sulemane', type: 'URGENTE' },
-                      { id: '#98322', date: '30/12/2025', name: 'Richard Sulemane', type: 'URGENTE' },
-                      { id: '#98323', date: '30/12/2025', name: 'Richard Sulemane', type: 'URGENTE' },
-                    ].map((record, i) => (
-                      <div key={i} className="p-8 hover:bg-slate-50 transition-colors group cursor-pointer flex items-center justify-between">
-                        <div>
-                          <p className="text-base font-black text-slate-900 mb-1">{record.date}</p>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{record.id} - {record.name}</p>
+                    {incidents
+                      .filter(i => i.companyId === currentUser.companyId && i.status === 'resolved')
+                      .slice(0, 5)
+                      .map((record, i) => (
+                        <div key={i} className="p-8 hover:bg-slate-50 transition-colors group cursor-pointer flex items-center justify-between">
+                          <div>
+                            <p className="text-base font-black text-slate-900 mb-1">{record.timestamp}</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{record.id} - {record.patientName || 'Colaborador Corporativo'}</p>
+                          </div>
+                          <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                            record.priority === 'CRITICAL' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          }`}>
+                            {record.type}
+                          </span>
                         </div>
-                        <span className="bg-[#FFFBEB] text-[#D97706] px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-[#FEF3C7]">
-                          {record.type}
-                        </span>
-                      </div>
-                    ))}
+                      ))}
+                    {incidents.filter(i => i.companyId === currentUser.companyId && i.status === 'resolved').length === 0 && (
+                       <div className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                         Sem registos históricos.
+                       </div>
+                    )}
                   </div>
                   <div className="p-8 text-center border-t border-slate-50">
                     <button 

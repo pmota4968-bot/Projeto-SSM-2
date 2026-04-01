@@ -429,6 +429,7 @@ const App: React.FC = () => {
       ...selectedAmb, 
       driverId: assignedDriver?.authUserId,
       driverName: assignedDriver?.name,
+      companyId: selectedAmb.companyId, // Ensure Provider Company ID is preserved for broadcast matches
       phase: 'pending_accept', 
       timestamps: { dispatched: new Date().toLocaleTimeString() } 
     };
@@ -607,8 +608,10 @@ const App: React.FC = () => {
       if (ambState.driverName === currentUser.name) return true;
 
       // 4. BROADCAST para a empresa (Último recurso se não houver um motorista fixo no ambState)
-      // Usamos ambState.companyId (Provedor) em vez de i.companyId (Cliente)
-      if (ambState.companyId === currentUser.companyId && !ambState.driverId) return true;
+      // Usamos ambState.companyId do provedor em vez de i.companyId do cliente
+      const isProviderMatch = ambState.companyId === currentUser.companyId;
+      const isUnassigned = !ambState.driverId;
+      if (isProviderMatch && isUnassigned) return true;
 
       return false;
     });

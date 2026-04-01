@@ -186,7 +186,7 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
                   <input
                     required
                     type="text"
-                    placeholder="Ex: ALPHA-4"
+                    placeholder="AMB-01"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-blue-600 transition-all"
                     value={newAmbulance.id}
                     onChange={e => setNewAmbulance({ ...newAmbulance, id: e.target.value })}

@@ -460,7 +460,7 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ID da Unidade</label>
                                     <input 
                                         required 
-                                        placeholder="Ex: ALPHA-4" 
+                                        placeholder="Ex: AMB-01" 
                                         value={newAmbulance.id} 
                                         onChange={e => setNewAmbulance({...newAmbulance, id: e.target.value})} 
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
@@ -600,7 +600,7 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                                     <input 
                                         required 
                                         type="email"
-                                        placeholder="Ex: joao@ssm.co.mz" 
+                                        placeholder="Ex: motorista@exemplo.mz" 
                                         value={newDriver.email} 
                                         onChange={e => setNewDriver({...newDriver, email: e.target.value})} 
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 

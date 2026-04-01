@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, Activity, Settings, Battery, Signal, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, X, Save, Smartphone, Gauge } from 'lucide-react';
+import { Truck, Activity, Settings, Battery, Signal, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, X, Save, Smartphone, Gauge, Loader2 } from 'lucide-react';
 import { dbService } from '../services/dbService';
 import { AmbulanceState, Driver } from '../types';
 
@@ -19,9 +19,12 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
     capacity: 'Padrão'
   });
   const [editingAmbulance, setEditingAmbulance] = useState<AmbulanceState | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleAddAmbulance = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const ambulance: AmbulanceState = {
         id: newAmbulance.id,
@@ -38,30 +41,35 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
           totalIncidents: 0,
           acceptanceRate: 100,
           avgResponseTime: 0
-        }
+        },
       };
 
       await dbService.saveAmbulance(ambulance);
       onAddAmbulance(ambulance);
       setShowAddModal(false);
       setNewAmbulance({ id: '', plate: '', type: 'Básica', imei: '', capacity: 'Padrão' });
+      alert("Viatura registada com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar viatura:", error);
       alert("Erro ao salvar viatura no banco de dados.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleUpdateAmbulance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAmbulance) return;
+    setIsSaving(true);
     try {
       await dbService.saveAmbulance(editingAmbulance);
       alert("Viatura atualizada com sucesso!");
       setEditingAmbulance(null);
-      window.location.reload(); // Quick refresh to update list
     } catch (error) {
       console.error("Erro ao atualizar viatura:", error);
       alert("Erro ao atualizar viatura.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -126,8 +134,8 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                      <span className="text-[10px] font-black text-emerald-600 uppercase">Disponível</span>
+                       <div className={`w-1.5 h-1.5 rounded-full ${amb.status === 'available' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                       <span className="text-[10px] font-black text-slate-600 uppercase">{amb.status === 'available' ? 'Disponível' : amb.status}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5">
@@ -243,17 +251,23 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
 
               <div className="pt-4 flex gap-3">
                 <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-[2] py-4 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  {isSubmitting ? "Gravando..." : "Confirmar Registo"}
+                </button>
+                <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
                 >
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-[2] py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-                >
-                  <Save className="w-4 h-4" /> Confirmar Registo
                 </button>
               </div>
             </form>
@@ -356,9 +370,11 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
                 </button>
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className="flex-[2] py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
                 >
-                  <Save className="w-4 h-4" /> Atualizar Viatura
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? "Gravando..." : "Atualizar Viatura"}
                 </button>
               </div>
             </form>

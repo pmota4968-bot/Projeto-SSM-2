@@ -411,10 +411,10 @@ const App: React.FC = () => {
   const handleDispatch = async (incidentId: string, ambId: string) => {
     const selectedAmb = ambulances.find(a => a.id === ambId)!;
     
-    // 1. Tenta encontrar o motorista associado a esta ambulância (pelo IMEI ou ID)
+    // 1. Tenta encontrar o motorista associado a esta ambulância (Prioriza o vínculo direto na base)
     let assignedDriver = drivers.find(d => 
-      (d.imei && d.imei === selectedAmb.imei) || 
-      (d.id === selectedAmb.id)
+      (d.currentAmbulanceId && d.currentAmbulanceId === selectedAmb.id) ||
+      (d.imei && d.imei === selectedAmb.imei)
     );
 
     // 2. NOVO FALLBACK: Se não houver match direto, tenta o primeiro motorista disponível da mesma empresa
@@ -597,11 +597,20 @@ const App: React.FC = () => {
       const ambState = i.ambulanceState as any;
       if (!ambState || i.status === 'closed') return false;
 
-      return (
-        ambState.driverId === currentUser.id || // Match direto pelo ID de Auth
-        (ambState.imei && ambState.imei === currentDriver?.imei) || // Match por IMEI
-        (i.companyId === currentUser.companyId && !ambState.driverId) // BROADCAST para a empresa se não houver motorista fixo
-      );
+      // 1. Match direto pelo ID de Auth (MAIOR PRIORIDADE)
+      if (ambState.driverId === currentUser.id) return true;
+
+      // 2. Match por IMEI (DEVICE SYNC)
+      if (ambState.imei && ambState.imei === currentDriver?.imei) return true;
+
+      // 3. Match por NOME (FALLBACK para identidades desvinculadas na base)
+      if (ambState.driverName === currentUser.name) return true;
+
+      // 4. BROADCAST para a empresa (Último recurso se não houver um motorista fixo no ambState)
+      // Usamos ambState.companyId (Provedor) em vez de i.companyId (Cliente)
+      if (ambState.companyId === currentUser.companyId && !ambState.driverId) return true;
+
+      return false;
     });
 
     // Se não houver incidente, tentamos encontrar a ambulância padrão da empresa para inicializar o PeerJS

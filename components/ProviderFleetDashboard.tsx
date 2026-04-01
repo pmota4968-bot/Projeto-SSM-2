@@ -49,7 +49,8 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         email: '',
         password: '',
         imei: '',
-        status: 'available' as any
+        status: 'available' as any,
+        currentAmbulanceId: ''
     });
 
     const companyDrivers = useMemo(() => {
@@ -132,7 +133,8 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 email: newDriver.email,
                 imei: newDriver.imei,
                 authUserId: authData.user.id,
-                status: newDriver.status
+                status: newDriver.status,
+                currentAmbulanceId: newDriver.currentAmbulanceId
             };
 
             await dbService.saveDriver(driver);
@@ -145,7 +147,8 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 email: '', 
                 password: '', 
                 imei: '', 
-                status: 'available' 
+                status: 'available',
+                currentAmbulanceId: ''
             });
             
             const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
@@ -204,14 +207,19 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
     const handleUpdateDriver = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingDriver) return;
+        setIsSubmitting(true);
         try {
             await dbService.saveDriver(editingDriver);
-            alert("Dados atualizados com sucesso!");
+            alert("Motorista atualizado com sucesso!");
             setEditingDriver(null);
-            const updatedDrivers = await dbService.getDrivers();
+            
+            const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
             onUpdateDrivers(updatedDrivers);
         } catch (error) {
+            console.error("Erro ao atualizar motorista:", error);
             alert("Erro ao atualizar motorista.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -427,11 +435,10 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 )}
             </div>
 
-            {/* Modals - Same logic and style as before but focused for Manager */}
+            {/* Modals */}
             {showAddAmbulance && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-white rounded-[3rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                        {/* Modal Header */}
                         <div className="p-10 flex items-center justify-between border-b border-slate-100">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 bg-blue-600 rounded-[1.5rem] flex items-center justify-center shadow-lg shadow-blue-600/20">
@@ -537,7 +544,6 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             {showAddDriver && (
                 <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-white rounded-[3rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                        {/* Modal Header */}
                         <div className="p-10 flex items-center justify-between border-b border-slate-100">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 bg-blue-600 rounded-[1.5rem] flex items-center justify-center shadow-lg shadow-blue-600/20">
@@ -656,7 +662,6 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             {editingAmbulance && (
                 <div className="fixed inset-0 z-[300] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-white rounded-[3rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                        {/* Modal Header */}
                         <div className="p-10 flex items-center justify-between border-b border-slate-100">
                             <div className="flex items-center gap-6">
                                 <div className="w-16 h-16 bg-blue-600 rounded-[1.5rem] flex items-center justify-center shadow-lg shadow-blue-600/20">

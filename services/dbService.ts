@@ -282,6 +282,7 @@ export const dbService = {
             imei: d.imei,
             authUserId: d.auth_user_id,
             status: d.status as any,
+            currentAmbulanceId: d.current_ambulance_id,
             avatar: d.avatar_url,
             createdAt: d.created_at
         }));
@@ -307,6 +308,7 @@ export const dbService = {
             imei: data.imei,
             authUserId: data.auth_user_id,
             status: data.status as any,
+            currentAmbulanceId: data.current_ambulance_id,
             avatar: data.avatar_url,
             createdAt: data.created_at
         };
@@ -322,6 +324,7 @@ export const dbService = {
             imei: driver.imei,
             auth_user_id: driver.authUserId,
             status: driver.status,
+            current_ambulance_id: driver.currentAmbulanceId,
             avatar_url: driver.avatar
         };
 

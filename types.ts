@@ -68,6 +68,7 @@ export interface Driver {
   imei?: string;
   authUserId?: string;
   status: 'available' | 'on_duty' | 'off_duty' | 'break';
+  currentAmbulanceId?: string;
   avatar?: string;
   createdAt?: string;
 }

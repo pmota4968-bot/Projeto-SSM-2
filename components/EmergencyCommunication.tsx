@@ -10,6 +10,7 @@ interface EmergencyCommunicationProps {
   incidentId: string;
   company?: Company;
   currentUser?: AdminUser;
+  incident?: EmergencyCase;
   onStartTriage?: (companyName: string) => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
@@ -20,6 +21,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   incidentId,
   company,
   currentUser,
+  incident,
   onStartTriage,
   isMinimized = false,
   onToggleMinimize,
@@ -173,7 +175,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
 
     let targetId = '';
     if (activeChannel === 'AMBULANCIA') {
-      targetId = `ssm-amb-ALPHA-1`; // Em prod seria dinâmico via incident.ambulanceId
+      targetId = `ssm-amb-${incident?.ambulanceId || 'ALPHA-1'}`; 
     } else if (activeChannel === 'CLIENTE') {
       if (!company?.id) {
         alert("Erro: ID da empresa não encontrado para iniciar chamada.");
@@ -338,8 +340,10 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
             <p className="text-xs font-black text-blue-900 uppercase">
               {currentUser?.role.includes('CLIENTE') ? 'Centro de Coordenação SSM' :
                 activeChannel === 'CLIENTE' ? company?.name :
-                  activeChannel === 'AMBULANCIA' ? 'Unidade Alpha-1 (João C.)' :
-                    activeChannel === 'EXTERNAL' ? 'Agências Externas (Polícia/Bombeiros)' : 'Stakeholders / Administração'}
+                activeChannel === 'AMBULANCIA' ? (
+                  incident?.ambulanceId ? `${incident.ambulanceId} (${incident.ambulanceState?.driverName || 'Motorista'})` : 'Viatura Despachada'
+                ) :
+                activeChannel === 'EXTERNAL' ? 'Agências Externas (Polícia/Bombeiros)' : 'Stakeholders / Administração'}
             </p>
           </div>
         </div>
@@ -455,7 +459,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
                 <div>
                   <h4 className="text-lg font-black text-slate-900 uppercase font-corporate">Estabelecer Conexão</h4>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 max-w-[250px] mx-auto leading-relaxed">
-                    A iniciar canal encriptado com {activeChannel === 'CLIENTE' ? 'o Ponto Focal Cliente' : 'a Viatura Alpha-1'}.
+                    A iniciar canal encriptado com {activeChannel === 'CLIENTE' ? 'o Ponto Focal Cliente' : `a Viatura ${incident?.ambulanceId || ''}`}.
                   </p>
                 </div>
                 <button onClick={() => startCall(activeTab as 'voz' | 'video')} className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center gap-3 shadow-xl transition-all active:scale-95">

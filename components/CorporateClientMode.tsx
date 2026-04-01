@@ -22,6 +22,7 @@ interface CorporateClientModeProps {
   employees: Employee[];
   companies?: Company[];
   onOpenChat: (incidentId: string) => void;
+  incidents?: EmergencyCase[];
 }
 
 const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
@@ -32,11 +33,16 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   currentUser,
   employees,
   companies = [],
-  onOpenChat
+  onOpenChat,
+  incidents = []
 }) => {
   // Estados: idle -> confirming -> activating -> active (call) -> waiting_dispatch -> tracking
   const [panicStep, setPanicStep] = useState<'idle' | 'confirming' | 'activating' | 'active' | 'waiting_dispatch' | 'tracking'>('idle');
   const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
+  
+  // Find my active incident
+  const myActiveIncident = incidents.find(i => i.id === activeIncidentId || (i.companyId === currentUser.companyId && i.status !== 'resolved'));
+  
   const [isCallActive, setIsCallActive] = useState(false);
   const [eta, setEta] = useState(8);
   const [ambulancePos, setAmbulancePos] = useState<[number, number]>([-25.965, 32.575]);
@@ -227,7 +233,9 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight font-corporate uppercase flex items-center gap-3">
                   Apoio em Caminho <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse"></div>
                 </h2>
-                <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">Unidade ALPHA-1 Despachada • Monitorização GPS Activa</p>
+                <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">
+                  Viatura {myActiveIncident?.ambulanceId || ''} Despachada • Monitorização GPS Activa
+                </p>
               </div>
             </div>
 
@@ -239,7 +247,10 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Truck className="w-6 h-6" /></div>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Unidade Assignada</p>
-                      <p className="text-sm font-black text-slate-900 leading-none">ALPHA-1 (SAV)</p>
+                      <p className="text-sm font-black text-slate-900 leading-none">
+                        {myActiveIncident?.ambulanceId || 'Em Trânsito'} 
+                        {myActiveIncident?.ambulanceState?.type ? ` (${myActiveIncident.ambulanceState.type})` : ''}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -249,10 +260,12 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                 <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex-1">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">EQUIPA EM RESPOSTA</h4>
                   <div className="flex items-center gap-4 mb-8">
-                    <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">JC</div>
+                    <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
+                      {myActiveIncident?.ambulanceState?.driverName?.substring(0, 2).toUpperCase() || 'M'}
+                    </div>
                     <div>
-                      <h5 className="text-lg font-black text-slate-900">João Condestável</h5>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Paramédico Sénior</p>
+                      <h5 className="text-lg font-black text-slate-900">{myActiveIncident?.ambulanceState?.driverName || 'Motorista de Plantão'}</h5>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Placa: {myActiveIncident?.ambulanceState?.plate || '---'}</p>
                     </div>
                   </div>
                   <div className="space-y-3">

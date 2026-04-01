@@ -668,6 +668,11 @@ const App: React.FC = () => {
               <CorporateClientMode
                 adminName={currentUser.name}
                 onLogout={handleLogout}
+                incidents={incidents}
+                onOpenChat={(id) => {
+                  setActiveCommIncidentId(id);
+                  setCommIsMinimized(false);
+                }}
                 onTriggerEmergency={async () => {
                   const incidentId = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
                   const newInc: EmergencyCase = {
@@ -690,12 +695,7 @@ const App: React.FC = () => {
                   } catch (err) {
                     console.error("Erro CRÍTICO ao gravar SOS na base de dados (RLS ou formato de id inválido):", err);
                     alert("Atenção: A chamada SOS local ativou, mas não foi possível enviar aos servidores de coordenação. Por favor, ligue para a linha telefónica de emergência.");
-                    // Rollback on critical failure? For now keep it so client doesn't panic more, but they are warned
                   }
-                }}
-                onOpenChat={(id) => {
-                  setActiveCommIncidentId(id);
-                  setCommIsMinimized(false);
                 }}
                 companyId={currentUser.companyId}
                 currentUser={currentUser}
@@ -898,6 +898,7 @@ const App: React.FC = () => {
                 incidentId={activeCommIncidentId}
                 company={filteredCompanies.find(c => c.id === filteredIncidents.find(i => i.id === activeCommIncidentId)?.companyId)}
                 currentUser={currentUser}
+                incident={filteredIncidents.find(i => i.id === activeCommIncidentId)}
                 onStartTriage={handleStartTriage}
                 isMinimized={commIsMinimized}
                 onToggleMinimize={() => setCommIsMinimized(!commIsMinimized)}

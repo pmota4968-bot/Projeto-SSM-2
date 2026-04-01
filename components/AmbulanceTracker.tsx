@@ -144,7 +144,7 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Unidade Assignada</p>
-                                    <p className="text-sm font-black text-slate-900 leading-none">{incident.ambulanceId || 'ALPHA-1'}</p>
+                                    <p className="text-sm font-black text-slate-900 leading-none">{incident.ambulanceId || 'Viatura Despachada'}</p>
                                 </div>
                             </div>
                         </div>
@@ -223,7 +223,7 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
 
                     <div className="mt-10 pt-8 border-t border-slate-100 space-y-3">
                         <button 
-                            onClick={() => alert(`A iniciar chamada encriptada para: ${incident.ambulanceId || 'ALPHA-1'}...`)}
+                            onClick={() => alert(`A iniciar chamada encriptada para: ${incident.ambulanceId || 'a Viatura'}...`)}
                             className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
                         >
                             <Phone className="w-4 h-4" /> Ligar para Viatura

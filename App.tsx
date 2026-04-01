@@ -75,8 +75,9 @@ const App: React.FC = () => {
       let recentSOS = incidents.find(i => i.status === 'active' && i.priority === EmergencyPriority.CRITICAL);
       
       if (!recentSOS) {
-        // Se a chamada WebRTC chegar antes do WebSocket (ou se o realtime falhar/inativo), cria-se um SOS temporário
-        console.warn("Chamada recebida mas incidente não encontrado na base de dados (esperando Realtime). Criando alerta local...");
+        const peerId = webrtcState.incomingCall.peer;
+        const extractedCompanyId = peerId?.startsWith('ssm-client-') ? peerId.replace('ssm-client-', '') : '';
+
         recentSOS = {
           id: `CALL-${Date.now()}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -85,7 +86,7 @@ const App: React.FC = () => {
           status: 'active',
           priority: EmergencyPriority.CRITICAL,
           coords: [0,0],
-          companyId: ''
+          companyId: extractedCompanyId
         };
       }
       setIncomingCallIncident(recentSOS);
@@ -875,7 +876,11 @@ const App: React.FC = () => {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
-                    setActiveCommIncidentId(incomingCallIncident.id);
+                    const inc = incomingCallIncident;
+                    if (inc && inc.id.startsWith('CALL-')) {
+                      setIncidents(prev => [inc, ...prev]);
+                    }
+                    setActiveCommIncidentId(inc ? inc.id : null);
                     setIncomingCallIncident(null);
                   }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-blue-600/20 active:scale-95 transition-all flex items-center justify-center gap-3"

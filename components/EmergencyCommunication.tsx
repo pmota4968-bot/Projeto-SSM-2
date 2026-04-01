@@ -177,11 +177,12 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     if (activeChannel === 'AMBULANCIA') {
       targetId = `ssm-amb-${incident?.ambulanceId || incidentId}`; 
     } else if (activeChannel === 'CLIENTE') {
-      if (!company?.id) {
+      const resolvedCompanyId = company?.id || incident?.companyId; 
+      if (!resolvedCompanyId) {
         alert("Erro: ID da empresa não encontrado para iniciar chamada.");
         return;
       }
-      targetId = `ssm-client-${company.id}`;
+      targetId = `ssm-client-${resolvedCompanyId}`;
     } else {
       // Para canais externos/stakeholders, poderíamos ter IDs específicos ou ignorar se não aplicável
       alert(`Chamadas para o canal ${activeChannel} ainda não estão configuradas.`);

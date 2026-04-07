@@ -600,21 +600,38 @@ const App: React.FC = () => {
       const ambState = i.ambulanceState as any;
       if (!ambState || i.status === 'closed') return false;
 
+      const userCompanyId = (currentUser.companyId || '').toLowerCase().trim();
+      const driverAuthId = (currentUser.id || '').toLowerCase().trim();
+      const driverName = (currentUser.name || '').toLowerCase().trim();
+
+      const ambCompanyId = (ambState.companyId || '').toLowerCase().trim();
+      const ambDriverId = (ambState.driverId || '').toLowerCase().trim();
+      const ambDriverName = (ambState.driverName || '').toLowerCase().trim();
+      const ambPhase = ambState.phase;
+
+      // Log de diagnóstico para depuração (visível na consola do navegador)
+      if (ambPhase === 'pending_accept' && ambCompanyId === userCompanyId) {
+        console.log(`[DriverFilter] Incidente ${i.id} detetado para a empresa ${userCompanyId}.`);
+      }
+
       // 1. Match direto pelo ID de Auth (MAIOR PRIORIDADE)
-      if (ambState.driverId === currentUser.id) return true;
+      if (ambDriverId && ambDriverId === driverAuthId) return true;
 
       // 2. Match por IMEI (DEVICE SYNC)
-      if (ambState.imei && ambState.imei === currentDriver?.imei) return true;
+      if (ambState.imei && currentDriver?.imei && ambState.imei === currentDriver.imei) return true;
 
       // 3. Match por NOME (FALLBACK para identidades desvinculadas na base)
-      if (ambState.driverName === currentUser.name) return true;
+      if (ambDriverName && ambDriverName === driverName) return true;
 
       // 4. BROADCAST para a empresa (Garantir que todos os motoristas ativos vejam o despacho inicial)
       // Se estiver em 'pending_accept', permitimos que qualquer motorista da mesma empresa veja o pedido
-      const isProviderMatch = ambState.companyId === currentUser.companyId;
-      const isPending = ambState.phase === 'pending_accept';
+      const isProviderMatch = ambCompanyId === userCompanyId;
+      const isPending = ambPhase === 'pending_accept';
       
-      if (isProviderMatch && isPending) return true;
+      if (isProviderMatch && isPending) {
+        console.log(`[DriverFilter] ALERTA: Incidente ${i.id} BROADCAST aceite para ${currentUser.name}`);
+        return true;
+      }
 
       return false;
     });

@@ -42,6 +42,7 @@ const App: React.FC = () => {
   const [incidents, setIncidents] = useState<EmergencyCase[]>([]);
   const [triageInitialData, setTriageInitialData] = useState<{ companyName?: string } | null>(null);
   const [activeCommIncidentId, setActiveCommIncidentId] = useState<string | null>(null);
+  const [activeCommIncident, setActiveCommIncident] = useState<EmergencyCase | null>(null);
   const [activeIncidentIdForClient, setActiveIncidentIdForClient] = useState<string | null>(null);
   const [commIsMinimized, setCommIsMinimized] = useState(false);
   const [incomingCallIncident, setIncomingCallIncident] = useState<EmergencyCase | null>(null);
@@ -877,10 +878,13 @@ const App: React.FC = () => {
                 <button
                   onClick={() => {
                     const inc = incomingCallIncident;
-                    if (inc && inc.id.startsWith('CALL-')) {
-                      setIncidents(prev => [inc, ...prev]);
+                    if (inc) {
+                      if (inc.id.startsWith('CALL-')) {
+                        setIncidents(prev => [inc, ...prev]);
+                      }
+                      setActiveCommIncident(inc);
+                      setActiveCommIncidentId(inc.id);
                     }
-                    setActiveCommIncidentId(inc ? inc.id : null);
                     setIncomingCallIncident(null);
                   }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-blue-600/20 active:scale-95 transition-all flex items-center justify-center gap-3"
@@ -899,25 +903,25 @@ const App: React.FC = () => {
         )}
 
         {/* Global Emergency Communication Modal / Floating Window */}
-        {activeCommIncidentId && (() => {
-          const resolvedCommIncident = incidents.find(i => i.id === activeCommIncidentId) || (incomingCallIncident?.id === activeCommIncidentId ? incomingCallIncident : null);
-          return (
-            <div className={`fixed inset-0 z-[150] transition-all duration-500 flex ${commIsMinimized ? 'pointer-events-none items-end justify-end p-8' : 'bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4'}`}>
-              <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-md h-24 rounded-3xl mb-4 mr-4' : 'w-full max-w-5xl h-[85vh] rounded-[3rem]'}`}>
-                <EmergencyCommunication
-                  incidentId={activeCommIncidentId}
-                  company={companies.find(c => c.id === resolvedCommIncident?.companyId)}
-                  currentUser={currentUser}
-                  incident={resolvedCommIncident}
-                  onStartTriage={handleStartTriage}
-                  isMinimized={commIsMinimized}
-                  onToggleMinimize={() => setCommIsMinimized(!commIsMinimized)}
-                  onClose={() => setActiveCommIncidentId(null)}
-                />
-              </div>
+        {activeCommIncident && (
+          <div className={`fixed inset-0 z-[150] transition-all duration-500 flex ${commIsMinimized ? 'pointer-events-none items-end justify-end p-8' : 'bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4'}`}>
+            <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-md h-24 rounded-3xl mb-4 mr-4' : 'w-full max-w-5xl h-[85vh] rounded-[3rem]'}`}>
+              <EmergencyCommunication
+                incidentId={activeCommIncident.id}
+                company={companies.find(c => c.id === activeCommIncident.companyId)}
+                currentUser={currentUser}
+                incident={activeCommIncident}
+                onStartTriage={handleStartTriage}
+                isMinimized={commIsMinimized}
+                onToggleMinimize={() => setCommIsMinimized(!commIsMinimized)}
+                onClose={() => {
+                  setActiveCommIncidentId(null);
+                  setActiveCommIncident(null);
+                }}
+              />
             </div>
-          );
-        })()}
+          </div>
+        )}
       </div>
     );
   } catch (renderError) {

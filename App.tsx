@@ -609,11 +609,12 @@ const App: React.FC = () => {
       // 3. Match por NOME (FALLBACK para identidades desvinculadas na base)
       if (ambState.driverName === currentUser.name) return true;
 
-      // 4. BROADCAST para a empresa (Último recurso se não houver um motorista fixo no ambState)
-      // Usamos ambState.companyId do provedor em vez de i.companyId do cliente
+      // 4. BROADCAST para a empresa (Garantir que todos os motoristas ativos vejam o despacho inicial)
+      // Se estiver em 'pending_accept', permitimos que qualquer motorista da mesma empresa veja o pedido
       const isProviderMatch = ambState.companyId === currentUser.companyId;
-      const isUnassigned = !ambState.driverId;
-      if (isProviderMatch && isUnassigned) return true;
+      const isPending = ambState.phase === 'pending_accept';
+      
+      if (isProviderMatch && isPending) return true;
 
       return false;
     });

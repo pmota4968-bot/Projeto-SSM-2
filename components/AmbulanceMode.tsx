@@ -300,7 +300,11 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
    const handleAccept = () => {
       if (incident) {
-         onUpdateAmbulance(incident.id, { phase: 'en_route_to_patient' });
+         onUpdateAmbulance(incident.id, { 
+            phase: 'en_route_to_patient',
+            driverId: user.id,
+            driverName: adminName
+         });
          auditLogger.log({ id: driverDetails?.id || 'UNKNOWN_DRV', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_ACCEPTED_FIELD', incident.id);
       }
    };

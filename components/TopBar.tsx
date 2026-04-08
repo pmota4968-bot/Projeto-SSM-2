@@ -9,9 +9,19 @@ interface TopBarProps {
   currentUser: AdminUser;
   onLogout?: () => void;
   toggleSidebar: () => void;
+  isDbConnected?: boolean;
+  webrtcConnected?: boolean;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, onLogout, toggleSidebar }) => {
+const TopBar: React.FC<TopBarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  currentUser, 
+  onLogout, 
+  toggleSidebar,
+  isDbConnected = true,
+  webrtcConnected = false
+}) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const getRoleDisplayName = (role: string, id: string) => {
@@ -103,6 +113,19 @@ const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, currentUser, o
         </div>
 
         <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 pr-4 border-r border-slate-100">
+             {/* Indicador Supabase/DB */}
+             <div className="flex items-center gap-1.5" title={isDbConnected ? 'Base de Dados: Ligada' : 'Base de Dados: Offline'}>
+                <div className={`w-2 h-2 rounded-full ${isDbConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500 animate-pulse'}`}></div>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">DB</span>
+             </div>
+             {/* Indicador WebRTC/Comms */}
+             <div className="flex items-center gap-1.5" title={webrtcConnected ? 'Comunicações: Ativas' : 'Comunicações: Inativas/Erro'}>
+                <div className={`w-2 h-2 rounded-full ${webrtcConnected ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-300'}`}></div>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">COM</span>
+             </div>
+          </div>
+
           <div className="flex items-center gap-4">
             <button className="p-2 text-slate-400 hover:text-slate-900 relative">
               <Bell className="w-5 h-5" />

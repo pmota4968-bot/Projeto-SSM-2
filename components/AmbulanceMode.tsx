@@ -94,10 +94,11 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
          webrtcService.current = new WebRTCService((stateUpdate) => {
             setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
          });
-         // Utilizar ID da ambulância ou um fallback baseado no IMEI ou nome do motorista para WebRTC
-         const pId = incident?.ambulanceState?.id 
-            ? `ssm-amb-${incident.ambulanceState.id}` 
-            : imei ? `ssm-amb-${imei}` : `ssm-amb-local-${adminName.replace(/\s+/g, '-')}`;
+         // Peer ID for the ambulance
+         const ambId = incident?.ambulanceId || (incident as any)?.ambulance_id;
+         const pId = ambId 
+            ? `ssm-amb-${ambId}` 
+            : imei ? `ssm-amb-${imei}` : `ssm-amb-guest-${adminName.replace(/\s+/g, '-')}`;
          
          webrtcService.current.initialize(pId);
       }

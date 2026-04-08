@@ -175,7 +175,12 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
 
     let targetId = '';
     if (activeChannel === 'AMBULANCIA') {
-      targetId = `ssm-amb-${incident?.ambulanceId || incidentId}`; 
+      const resolvedAmbId = incident?.ambulanceId || (incident as any)?.ambulance_id;
+      if (!resolvedAmbId) {
+        alert("Atenção: Nenhuma viatura foi designada para este incidente ainda. Realize o despacho primeiro.");
+        return;
+      }
+      targetId = `ssm-amb-${resolvedAmbId}`; 
     } else if (activeChannel === 'CLIENTE') {
       const resolvedCompanyId = company?.id || incident?.companyId; 
       if (!resolvedCompanyId) {

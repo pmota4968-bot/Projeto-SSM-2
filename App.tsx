@@ -47,6 +47,7 @@ const App: React.FC = () => {
   const [commIsMinimized, setCommIsMinimized] = useState(false);
   const [incomingCallIncident, setIncomingCallIncident] = useState<EmergencyCase | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState(true);
   const prevIncidentsRef = useRef<EmergencyCase[]>(incidents);
 
   // Global WebRTC for Operator/Central
@@ -60,7 +61,7 @@ const App: React.FC = () => {
           webrtcService.current = new WebRTCService((stateUpdate) => {
             setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
           });
-          webrtcService.current.initialize('ssm-central-MAIN');
+          webrtcService.current.initialize(`ssm-central-${currentUser.id}`);
         }
       });
     }
@@ -172,6 +173,7 @@ const App: React.FC = () => {
     const incidentsSubscription = supabase
       .channel('incidents_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, async (payload) => {
+        setIsDbConnected(true);
         if (payload.eventType === 'INSERT') {
           const newInc = payload.new as any;
           const ambState = newInc.ambulance_state ? (typeof newInc.ambulance_state === 'string' ? JSON.parse(newInc.ambulance_state) : newInc.ambulance_state) : undefined;
@@ -202,7 +204,10 @@ const App: React.FC = () => {
           setIncidents(prev => prev.filter(inc => inc.id !== payload.old.id));
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setIsDbConnected(true);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setIsDbConnected(false);
+      });
 
     // Set up real-time drivers listener
     const driversSubscription = supabase
@@ -783,6 +788,8 @@ const App: React.FC = () => {
             currentUser={currentUser}
             onLogout={handleLogout}
             toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            isDbConnected={isDbConnected}
+            webrtcConnected={webrtcState.isConnected}
           />
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
             {activeTab === 'dashboard' && (

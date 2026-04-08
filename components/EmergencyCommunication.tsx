@@ -15,6 +15,10 @@ interface EmergencyCommunicationProps {
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
   onClose?: () => void;
+  sharedWebRTC?: {
+    service: WebRTCService | null;
+    state: WebRTCState;
+  };
 }
 
 const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
@@ -25,7 +29,8 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   onStartTriage,
   isMinimized = false,
   onToggleMinimize,
-  onClose
+  onClose,
+  sharedWebRTC
 }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'voz' | 'video' | 'historico'>('chat');
   const [activeChannel, setActiveChannel] = useState<'CLIENTE' | 'AMBULANCIA' | 'EXTERNAL' | 'STAKEHOLDER'>('CLIENTE');
@@ -38,8 +43,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<number | null>(null);
 
-  // WebRTC State
-  const [webrtcState, setWebrtcState] = useState<WebRTCState>({
+  const [internalWebrtcState, setInternalWebrtcState] = useState<WebRTCState>({
     peerId: null,
     isConnected: false,
     incomingCall: null,
@@ -50,14 +54,21 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     isVideoActive: false
   });
 
-  const webrtcService = useRef<WebRTCService | null>(null);
+  const webrtcState = sharedWebRTC?.state || internalWebrtcState;
+  const webrtcService = useRef<WebRTCService | null>(sharedWebRTC?.service || null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
+    // If we have a shared service from App.tsx, we don't initialize a new one
+    if (sharedWebRTC?.service) {
+      webrtcService.current = sharedWebRTC.service;
+      return;
+    }
+
     if (!webrtcService.current) {
       webrtcService.current = new WebRTCService((stateUpdate) => {
-        setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
+        setInternalWebrtcState(prev => ({ ...prev, ...stateUpdate }));
       });
       // ID para a central: ssm-central-[incidentId]
       webrtcService.current.initialize(`ssm-central-${incidentId}`);

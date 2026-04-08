@@ -8,10 +8,10 @@ import {
 } from 'lucide-react';
 import { AMBULANCES } from '../constants';
 import { auditLogger } from '../services/auditLogger';
-import L from 'leaflet';
-
 import { EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, OperationReport, Employee, CommunicationLog, Company, Resource } from '../types';
 import { WebRTCService, WebRTCState } from '../services/webRTCService';
+import { loadGoogleMaps } from '../services/googleMapsLoader';
+import { dbService } from '../services/dbService';
 
 interface CorporateClientModeProps {
   onTriggerEmergency: () => void;
@@ -47,10 +47,10 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const [eta, setEta] = useState(8);
   const [ambulancePos, setAmbulancePos] = useState<[number, number]>([-25.965, 32.575]);
 
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const ambulanceMarkerRef = useRef<L.Marker | null>(null);
-  const routePolylineRef = useRef<L.Polyline | null>(null);
+  const ambulanceMarkerRef = useRef<google.maps.Marker | null>(null);
+  const [isApiReady, setIsApiReady] = useState(false);
 
   // WebRTC State
   const [webrtcState, setWebrtcState] = useState<WebRTCState>({
@@ -67,6 +67,13 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const webrtcService = useRef<WebRTCService | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (apiKey) {
+      loadGoogleMaps(apiKey).then(() => setIsApiReady(true));
+    }
+  }, []);
 
   useEffect(() => {
     if (!webrtcService.current && companyId) {
@@ -116,70 +123,80 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   // Exemplo central da empresa, pode vir do Supabase no futuro.
   const clientLocation: [number, number] = [-25.9680, 32.5710]; 
 
-  // Simulação de movimento da ambulância
+  // Real GPS tracking of assigned ambulance
   useEffect(() => {
     let interval: number;
-    if (panicStep === 'tracking') {
-      interval = window.setInterval(() => {
-        setAmbulancePos(prev => {
-          const nextLat = prev[0] + (clientLocation[0] - prev[0]) * 0.08;
-          const nextLng = prev[1] + (clientLocation[1] - prev[1]) * 0.08;
+    if (panicStep === 'tracking' && myActiveIncident?.ambulanceId) {
+      interval = window.setInterval(async () => {
+        try {
+          const amb = (await dbService.getAmbulances()).find(a => a.id === myActiveIncident.ambulanceId);
+          if (amb && amb.currentPos) {
+            const nextPos = amb.currentPos;
+            setAmbulancePos(nextPos);
+            
+            if (ambulanceMarkerRef.current) {
+              ambulanceMarkerRef.current.setPosition({ lat: nextPos[0], lng: nextPos[1] });
+            }
 
-          if (ambulanceMarkerRef.current) {
-            ambulanceMarkerRef.current.setLatLng([nextLat, nextLng]);
+            // Estimate ETA based on distance (very rough)
+            const dist = Math.sqrt(Math.pow(nextPos[0] - clientLocation[0], 2) + Math.pow(nextPos[1] - clientLocation[1], 2));
+            setEta(Math.max(1, Math.round(dist * 500))); // 500 is a magic number for Maputo scale
           }
-
-          setEta(prevEta => Math.max(1, prevEta - (Math.random() > 0.85 ? 1 : 0)));
-          return [nextLat, nextLng];
-        });
-      }, 3500);
+        } catch (err) {
+          console.error("Erro ao rastrear ambulância:", err);
+        }
+      }, 5000);
     }
     return () => clearInterval(interval);
-  }, [panicStep]);
+  }, [panicStep, myActiveIncident?.ambulanceId]);
 
-  // Inicialização do mapa de rastreio
+  // Google Maps Initialization
   useEffect(() => {
-    if (panicStep === 'tracking' && mapContainerRef.current && !mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current, {
-        zoomControl: false,
-        attributionControl: false
-      }).setView(clientLocation, 15);
-
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapRef.current);
-
-      const clientIcon = L.divIcon({
-        className: 'custom-marker',
-        html: `<div class="bg-blue-600 p-2 rounded-full border-4 border-white shadow-xl text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
+    if (panicStep === 'tracking' && mapContainerRef.current && !mapRef.current && isApiReady) {
+      mapRef.current = new google.maps.Map(mapContainerRef.current, {
+        center: { lat: clientLocation[0], lng: clientLocation[1] },
+        zoom: 15,
+        disableDefaultUI: true,
+        styles: [
+          { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#616773" }] },
+          { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] }
+        ]
       });
-      L.marker(clientLocation, { icon: clientIcon }).addTo(mapRef.current);
 
-      const ambIcon = L.divIcon({
-        className: 'custom-marker',
-        html: `<div class="bg-red-600 p-2 rounded-xl border-2 border-white shadow-2xl text-white animate-pulse"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-5h-7v5a1 1 0 0 0 1 1h2"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg></div>`,
-        iconSize: [44, 44],
-        iconAnchor: [22, 22]
+      // Client Marker
+      new google.maps.Marker({
+        position: { lat: clientLocation[0], lng: clientLocation[1] },
+        map: mapRef.current,
+        title: companyName,
+        icon: {
+           path: google.maps.SymbolPath.CIRCLE,
+           scale: 8,
+           fillColor: "#2563eb",
+           fillOpacity: 1,
+           strokeWeight: 2,
+           strokeColor: "#FFFFFF"
+        }
       });
-      ambulanceMarkerRef.current = L.marker(ambulancePos, { icon: ambIcon }).addTo(mapRef.current);
 
-      routePolylineRef.current = L.polyline([ambulancePos, clientLocation], {
-        color: '#3b82f6',
-        weight: 4,
-        dashArray: '10, 10',
-        opacity: 0.6
-      }).addTo(mapRef.current);
+      // Ambulance Marker
+      ambulanceMarkerRef.current = new google.maps.Marker({
+        position: { lat: ambulancePos[0], lng: ambulancePos[1] },
+        map: mapRef.current,
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+          scaledSize: new google.maps.Size(40, 40)
+        }
+      });
     }
 
     return () => {
+      // Google Maps clean up is usually handled by garbage collection or explicit nulling
       if (mapRef.current) {
-        mapRef.current.remove();
         mapRef.current = null;
         ambulanceMarkerRef.current = null;
-        routePolylineRef.current = null;
       }
     };
-  }, [panicStep]);
+  }, [panicStep, isApiReady]);
 
   const handlePanicClick = () => {
     if (panicStep === 'idle') {
@@ -467,7 +484,6 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
 
       <style>{`
         .custom-marker { background: transparent !important; border: none !important; }
-        .leaflet-container { background: #f8fafc; border-radius: 2.5rem; }
       `}</style>
     </div>
   );

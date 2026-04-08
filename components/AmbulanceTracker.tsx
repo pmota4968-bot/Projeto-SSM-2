@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import L from 'leaflet';
+import { loadGoogleMaps } from '../services/googleMapsLoader';
+import { dbService } from '../services/dbService';
 import {
     X, Truck, MapPin, Hospital, Clock,
     Navigation, Shield, Activity, Phone,
@@ -15,9 +16,10 @@ interface AmbulanceTrackerProps {
 
 const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, onClose }) => {
     const mapContainerRef = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<L.Map | null>(null);
+    const mapRef = useRef<google.maps.Map | null>(null);
     const [eta, setEta] = useState(incident.ambulanceState?.eta || 8);
     const [phase, setPhase] = useState(incident.ambulanceState?.phase || 'en_route_to_patient');
+    const [isApiReady, setIsApiReady] = useState(false);
 
     // Posicionamento dinâmico
     const patientPos: [number, number] = incident.coords;
@@ -26,101 +28,116 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
         incident.ambulanceState?.currentPos || patientPos
     );
 
-    const markerRef = useRef<L.Marker | null>(null);
-    const routeRef = useRef<L.Polyline | null>(null);
+    const markerRef = useRef<google.maps.Marker | null>(null);
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
 
     useEffect(() => {
-        if (!mapContainerRef.current || mapRef.current) return;
-
-        mapRef.current = L.map(mapContainerRef.current, {
-            zoomControl: false,
-            attributionControl: false
-        }).setView(currentAmbPos, 14);
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapRef.current);
-
-        // Marker do Paciente/Empresa
-        const patientIcon = L.divIcon({
-            className: 'custom-marker',
-            html: `<div class="bg-blue-600 p-2 rounded-full border-4 border-white shadow-xl text-white">
-               ${company ? `<img src="${company.logo}" class="w-6 h-6 rounded-full" />` : '<Activity width="20" height="20" />'}
-             </div>`,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        });
-        L.marker(patientPos, { icon: patientIcon }).addTo(mapRef.current);
-
-        // Marker do Hospital
-        const hospitalIcon = L.divIcon({
-            className: 'custom-marker',
-            html: `<div class="bg-emerald-600 p-2 rounded-xl border-2 border-white shadow-xl text-white">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 21V15"/><path d="M8 21v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/><path d="M10 9h4"/><path d="M12 7v4"/></svg>
-             </div>`,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        });
-        L.marker(hospitalPos, { icon: hospitalIcon }).addTo(mapRef.current);
-
-        // Marker da Ambulância
-        const ambIcon = L.divIcon({
-            className: 'custom-marker',
-            html: `<div class="bg-red-600 p-2 rounded-xl border-2 border-white shadow-2xl text-white animate-pulse">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>
-             </div>`,
-            iconSize: [44, 44],
-            iconAnchor: [22, 22]
-        });
-        markerRef.current = L.marker(currentAmbPos, { icon: ambIcon }).addTo(mapRef.current);
-
-        // Rota
-        routeRef.current = L.polyline([currentAmbPos, patientPos], {
-            color: '#ef4444',
-            weight: 4,
-            dashArray: '10, 10',
-            opacity: 0.6
-        }).addTo(mapRef.current);
-
-        return () => {
-            if (mapRef.current) {
-                mapRef.current.remove();
-                mapRef.current = null;
-            }
-        };
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (apiKey) {
+            loadGoogleMaps(apiKey).then(() => setIsApiReady(true));
+        }
     }, []);
 
-    // Simulação de movimento
     useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentAmbPos(prev => {
-                const target = phase === 'evacuating' ? hospitalPos : patientPos;
-                const distLat = target[0] - prev[0];
-                const distLng = target[1] - prev[1];
+        if (!mapContainerRef.current || mapRef.current || !isApiReady) return;
 
-                // Se estiver muito perto, mudar de fase ou parar
-                if (Math.abs(distLat) < 0.0005 && Math.abs(distLng) < 0.0005) {
-                    if (phase === 'en_route_to_patient') {
-                        setPhase('at_patient');
-                        setTimeout(() => setPhase('evacuating'), 5000); // 5s no local
-                    } else if (phase === 'evacuating') {
-                        setPhase('at_hospital');
-                        clearInterval(interval);
+        mapRef.current = new google.maps.Map(mapContainerRef.current, {
+            center: { lat: currentAmbPos[0], lng: currentAmbPos[1] },
+            zoom: 14,
+            disableDefaultUI: true,
+            styles: [
+                { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#616773" }] },
+                { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] }
+            ]
+        });
+
+        directionsRendererRef.current = new google.maps.DirectionsRenderer({
+            map: mapRef.current,
+            suppressMarkers: true,
+            polylineOptions: {
+                strokeColor: "#ef4444",
+                strokeWeight: 4,
+                strokeOpacity: 0.6
+            }
+        });
+
+        // Client Marker
+        new google.maps.Marker({
+            position: { lat: patientPos[0], lng: patientPos[1] },
+            map: mapRef.current,
+            title: company?.name || "Local do Incidente",
+            icon: {
+               path: google.maps.SymbolPath.CIRCLE,
+               scale: 8,
+               fillColor: "#2563eb",
+               fillOpacity: 1,
+               strokeWeight: 2,
+               strokeColor: "#FFFFFF"
+            }
+        });
+
+        // Hospital Marker
+        new google.maps.Marker({
+            position: { lat: hospitalPos[0], lng: hospitalPos[1] },
+            map: mapRef.current,
+            title: "Hospital Central",
+            icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                scaledSize: new google.maps.Size(32, 32)
+            }
+        });
+
+        // Ambulance Marker
+        markerRef.current = new google.maps.Marker({
+            position: { lat: currentAmbPos[0], lng: currentAmbPos[1] },
+            map: mapRef.current,
+            icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                scaledSize: new google.maps.Size(40, 40)
+            }
+        });
+    }, [isApiReady]);
+
+    // Real-time GPS Tracking
+    useEffect(() => {
+        let interval: number;
+        if (incident.ambulanceId && isApiReady) {
+            interval = window.setInterval(async () => {
+                try {
+                    const ambulances = await dbService.getAmbulances();
+                    const amb = ambulances.find(a => a.id === incident.ambulanceId);
+                    if (amb && amb.currentPos) {
+                        const newPos = amb.currentPos;
+                        setCurrentAmbPos(newPos);
+                        
+                        if (markerRef.current) {
+                            markerRef.current.setPosition({ lat: newPos[0], lng: newPos[1] });
+                        }
+
+                        // Update Route
+                        if (directionsRendererRef.current) {
+                            const target = phase === 'evacuating' ? hospitalPos : patientPos;
+                            const directionsService = new google.maps.DirectionsService();
+                            directionsService.route({
+                                origin: { lat: newPos[0], lng: newPos[1] },
+                                destination: { lat: target[0], lng: target[1] },
+                                travelMode: google.maps.TravelMode.DRIVING
+                            }, (result, status) => {
+                                if (status === google.maps.DirectionsStatus.OK) {
+                                    directionsRendererRef.current?.setDirections(result);
+                                    const leg = result.routes[0].legs[0];
+                                    if (leg) setEta(Math.round(leg.duration.value / 60));
+                                }
+                            });
+                        }
                     }
-                    return prev;
+                } catch (err) {
+                    console.error("Erro ao rastrear ambulância:", err);
                 }
-
-                const nextLat = prev[0] + distLat * 0.1;
-                const nextLng = prev[1] + distLng * 0.1;
-
-                if (markerRef.current) markerRef.current.setLatLng([nextLat, nextLng]);
-                if (routeRef.current) routeRef.current.setLatLngs([[nextLat, nextLng], target]);
-
-                setEta(prevEta => Math.max(1, prevEta - (Math.random() > 0.9 ? 1 : 0)));
-                return [nextLat, nextLng];
-            });
-        }, 2000);
-
+            }, 5000);
+        }
         return () => clearInterval(interval);
-    }, [phase]);
+    }, [incident.ambulanceId, isApiReady, phase]);
 
     return (
         <div className="fixed inset-0 z-[300] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">

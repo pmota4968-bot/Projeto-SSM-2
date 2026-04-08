@@ -61,7 +61,8 @@ const App: React.FC = () => {
           webrtcService.current = new WebRTCService((stateUpdate) => {
             setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
           });
-          webrtcService.current.initialize(`ssm-central-${currentUser.id}`);
+          // Centralize ID to ssm-central-MAIN for all coordination clients to be reachable by corporate SOS
+          webrtcService.current.initialize('ssm-central-MAIN');
         }
       });
     }
@@ -944,6 +945,10 @@ const App: React.FC = () => {
                 onClose={() => {
                   setActiveCommIncidentId(null);
                   setActiveCommIncident(null);
+                }}
+                sharedWebRTC={{
+                  service: webrtcService.current,
+                  state: webrtcState
                 }}
               />
             </div>

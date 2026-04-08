@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
    Truck, CheckCircle, MapPin, Activity, LogOut,
    Bell, MessageSquare, Phone, Video, Send, X, PhoneOff,
-   Navigation, FileText, CheckCircle2, Hospital, Flag, Camera, Loader2
+   Navigation, FileText, CheckCircle2, Hospital, Flag, Camera, Loader2, AlertCircle
 } from 'lucide-react';
 import { EmergencyCase, AmbulanceState, OperationReport, Driver, CommunicationLog, AdminUser, Company } from '../types';
-import L from 'leaflet';
 import { auditLogger } from '../services/auditLogger';
 import { dbService } from '../services/dbService';
 import { WebRTCService, WebRTCState } from '../services/webRTCService';
+import { loadGoogleMaps } from '../services/googleMapsLoader';
 
 interface AmbulanceModeProps {
    onLogout: () => void;
@@ -42,9 +42,10 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    const [showChat, setShowChat] = useState(false);
    const [chatMessages, setChatMessages] = useState<CommunicationLog[]>([]);
    const [newMessage, setNewMessage] = useState('');
-   const [routePolyline, setRoutePolyline] = useState<L.Polyline | null>(null);
+   const [routeInfo, setRouteInfo] = useState<{ distance: string, duration: string } | null>(null);
    const [driverDetails, setDriverDetails] = useState<Driver | null>(null);
    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+   const [isApiReady, setIsApiReady] = useState(false);
 
    // WebRTC State
    const [webrtcState, setWebrtcState] = useState<WebRTCState>({
@@ -63,9 +64,17 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    const localVideoRef = useRef<HTMLVideoElement>(null);
 
    const mapContainerRef = useRef<HTMLDivElement>(null);
-   const mapRef = useRef<L.Map | null>(null);
-   const markerRef = useRef<L.Marker | null>(null);
-   const incidentMarkerRef = useRef<L.Marker | null>(null);
+   const mapRef = useRef<google.maps.Map | null>(null);
+   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+   const markerRef = useRef<google.maps.Marker | null>(null);
+   const destinationMarkerRef = useRef<google.maps.Marker | null>(null);
+
+   useEffect(() => {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (apiKey) {
+         loadGoogleMaps(apiKey).then(() => setIsApiReady(true));
+      }
+   }, []);
 
    useEffect(() => {
       const fetchDriverDetails = async () => {
@@ -123,31 +132,37 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
    // Real-time GPS Tracking
    useEffect(() => {
-      if (!imei || !navigator.geolocation) return;
+      if (!isApiReady || !imei || !navigator.geolocation) return;
 
       const watchId = navigator.geolocation.watchPosition(
          async (position) => {
             const { latitude, longitude, speed, heading } = position.coords;
-            const coords: [number, number] = [latitude, longitude];
+            const currentPos = { lat: latitude, lng: longitude };
 
             try {
                // Log to database for real-time tracking on dashboard
-               await dbService.logGpsTrack(imei, coords, speed || 0, heading || 0);
+               await dbService.logGpsTrack(imei, [latitude, longitude], speed || 0, heading || 0);
 
                // Update local map
                if (mapRef.current) {
                   if (!markerRef.current) {
-                     const ambIcon = L.divIcon({
-                        className: 'custom-marker',
-                        html: `<div class="bg-blue-600 p-2 rounded-full border-2 border-white shadow-xl text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg></div>`,
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 16]
+                     markerRef.current = new google.maps.Marker({
+                        position: currentPos,
+                        map: mapRef.current,
+                        icon: {
+                           path: google.maps.SymbolPath.CIRCLE,
+                           scale: 10,
+                           fillColor: "#2563eb",
+                           fillOpacity: 1,
+                           strokeWeight: 3,
+                           strokeColor: "#FFFFFF"
+                        }
                      });
-                     markerRef.current = L.marker(coords, { icon: ambIcon }).addTo(mapRef.current);
                   } else {
-                     markerRef.current.setLatLng(coords);
+                     markerRef.current.setPosition(currentPos);
                   }
-                  mapRef.current.panTo(coords);
+                  mapRef.current.panTo(currentPos);
+                  updateRoute(currentPos);
                }
             } catch (err) {
                console.error("Erro ao enviar GPS:", err);
@@ -158,7 +173,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
-   }, [imei]);
+   }, [isApiReady, imei, incident?.ambulanceState?.phase]);
 
    useEffect(() => {
       let timer: number;
@@ -182,79 +197,74 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       return () => clearInterval(timer);
    }, [incident?.id, incident?.ambulanceState?.phase]);
 
-   // Update Route on Map
-   useEffect(() => {
-      const updateRoute = async () => {
-         if (mapRef.current && incident && markerRef.current) {
-            // Clear previous markers/lines
-            if (incidentMarkerRef.current) mapRef.current.removeLayer(incidentMarkerRef.current);
-            if (routePolyline) mapRef.current.removeLayer(routePolyline);
+   const updateRoute = async (origin: { lat: number, lng: number }) => {
+      if (!isApiReady || !mapRef.current || !incident) return;
 
-            let destination: [number, number] | null = null;
-            let destName = "";
+      let destination: { lat: number, lng: number } | null = null;
+      let destName = "";
 
-            if (incident.ambulanceState?.phase === 'en_route_to_patient') {
-               destination = incident.coords;
-               destName = incident.locationName;
-            } else if (incident.ambulanceState?.phase === 'evacuating') {
-               // Try to find hospital coords
+      if (incident.ambulanceState?.phase === 'en_route_to_patient') {
+         destination = { lat: incident.coords[0], lng: incident.coords[1] };
+         destName = incident.locationName;
+      } else if (incident.ambulanceState?.phase === 'evacuating') {
+         try {
+            const resources = await dbService.getResources();
+            const hospital = resources.find(r => r.category === 'hospital');
+            if (hospital && hospital.location) {
                try {
-                  const resources = await dbService.getResources();
-                  const hospital = resources.find(r => r.category === 'hospital' && r.name === clinicalReport.hospitalName) 
-                                 || resources.find(r => r.category === 'hospital'); // Fallback to first hospital
-                  if (hospital && hospital.location) {
-                     // Tentar extrair coordenadas da string de localização ou usar campo específico se existir
-                     try {
-                        const parsed = JSON.parse(hospital.location);
-                        if (Array.isArray(parsed)) destination = parsed as [number, number];
-                     } catch {
-                        // Fallback se não for JSON, pode ser uma string descritiva
-                        console.warn("Localização do hospital não está em formato de coordenadas geográficas.");
-                     }
-                     destName = hospital.name;
+                  const parsed = JSON.parse(hospital.location);
+                  if (Array.isArray(parsed)) destination = { lat: parsed[0], lng: parsed[1] };
+                  destName = hospital.name;
+               } catch {}
+            }
+         } catch (err) {
+            console.error("Erro ao buscar hospital:", err);
+         }
+      }
+
+      if (destination && directionsRendererRef.current) {
+         const directionsService = new google.maps.DirectionsService();
+         directionsService.route(
+            {
+               origin: new google.maps.LatLng(origin.lat, origin.lng),
+               destination: new google.maps.LatLng(destination.lat, destination.lng),
+               travelMode: google.maps.TravelMode.DRIVING
+            },
+            (result, status) => {
+               if (status === google.maps.DirectionsStatus.OK && directionsRendererRef.current) {
+                  directionsRendererRef.current.setDirections(result);
+                  const leg = result?.routes[0]?.legs[0];
+                  if (leg) {
+                     setRouteInfo({
+                        distance: leg.distance?.text || "",
+                        duration: leg.duration?.text || ""
+                     });
                   }
-               } catch (err) {
-                  console.error("Erro ao buscar hospital:", err);
                }
             }
+         );
 
-            if (destination) {
-               const origin = markerRef.current.getLatLng();
-
-               // Add destination marker
-               const destIcon = L.divIcon({
-                  className: 'dest-marker',
-                  html: `<div class="bg-red-600 p-2 rounded-lg border-2 border-white shadow-xl text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>`,
-                  iconSize: [32, 32],
-                  iconAnchor: [16, 32]
-               });
-               incidentMarkerRef.current = L.marker(destination, { icon: destIcon }).addTo(mapRef.current);
-               incidentMarkerRef.current.bindPopup(`<b>Destino:</b> ${destName}`).openPopup();
-
-               // Draw simple route
-               const line = L.polyline([origin, destination], {
-                  color: '#3b82f6',
-                  weight: 6,
-                  opacity: 0.8,
-                  dashArray: '10, 10',
-                  lineJoin: 'round'
-               }).addTo(mapRef.current);
-
-               setRoutePolyline(line);
-
-               // Fit bounds to show both
-               const bounds = L.latLngBounds([origin, destination]);
-               mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-            }
-         } else if (!incident || incident.ambulanceState?.phase === 'idle') {
-            if (incidentMarkerRef.current && mapRef.current) mapRef.current.removeLayer(incidentMarkerRef.current);
-            if (routePolyline && mapRef.current) mapRef.current.removeLayer(routePolyline);
-            setRoutePolyline(null);
+         if (!destinationMarkerRef.current) {
+            destinationMarkerRef.current = new google.maps.Marker({
+               position: destination,
+               map: mapRef.current,
+               title: destName,
+               icon: {
+                  url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                  scaledSize: new google.maps.Size(32, 32)
+               }
+            });
+         } else {
+            destinationMarkerRef.current.setPosition(destination);
+            destinationMarkerRef.current.setTitle(destName);
          }
-      };
-
-      updateRoute();
-   }, [incident, incident?.coords, incident?.ambulanceState?.phase]);
+      } else {
+         if (directionsRendererRef.current) directionsRendererRef.current.setDirections(null);
+         if (destinationMarkerRef.current) destinationMarkerRef.current.setMap(null);
+         destinationMarkerRef.current = null;
+         setRouteInfo(null);
+      }
+   };
 
    // Chat Management
    useEffect(() => {
@@ -286,18 +296,29 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    }, [incident?.id, showChat]);
 
    useEffect(() => {
-      if (mapContainerRef.current && !mapRef.current) {
-         mapRef.current = L.map(mapContainerRef.current, { zoomControl: false, attributionControl: false }).setView([-25.9692, 32.5732], 15);
-         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapRef.current);
-      }
+      if (isApiReady && mapContainerRef.current && !mapRef.current) {
+         mapRef.current = new google.maps.Map(mapContainerRef.current, {
+            center: { lat: -25.9692, lng: 32.5732 },
+            zoom: 15,
+            disableDefaultUI: true,
+            styles: [
+               { "featureType": "all", "elementType": "labels.text.fill", "stylers": [{ "color": "#616773" }] },
+               { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
+               { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] }
+            ]
+         });
 
-      return () => {
-         if (mapRef.current) {
-            mapRef.current.remove();
-            mapRef.current = null;
-         }
-      };
-   }, []);
+         directionsRendererRef.current = new google.maps.DirectionsRenderer({
+            map: mapRef.current,
+            suppressMarkers: true,
+            polylineOptions: {
+               strokeColor: "#3b82f6",
+               strokeWeight: 6,
+               strokeOpacity: 0.8
+            }
+         });
+      }
+   }, [isApiReady]);
 
    const handleAccept = () => {
       if (incident) {
@@ -444,6 +465,17 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       }
    };
 
+   if (!import.meta.env.VITE_GOOGLE_MAPS_API_KEY) {
+      return (
+         <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 p-10 text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Sistema Inativo</h2>
+            <p className="text-slate-400 mt-2">Chave de API do Google Maps em falta. Contacte a administração para ativar o rastreio real.</p>
+            <button onClick={onLogout} className="mt-8 text-blue-400 font-bold uppercase tracking-widest flex items-center gap-2"><LogOut className="w-4 h-4" /> Sair do Sistema</button>
+         </div>
+      );
+   }
+
    return (
       <div className="h-screen w-screen flex flex-col bg-slate-900 overflow-hidden font-sans text-white">
          <header className="h-16 bg-slate-950 border-b border-white/10 flex items-center justify-between px-6 shrink-0 z-50">
@@ -512,7 +544,14 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
                                     incident.ambulanceState.phase === 'at_patient' ? 'Intervenção no Local' :
                                        'Evacuação para Unidade Hospitalar'}
                               </p>
-                              <p className="text-lg font-black">{incident.locationName}</p>
+                              <p className="text-lg font-black leading-none">{incident.locationName}</p>
+                              {routeInfo && (
+                                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1.5 flex items-center gap-3">
+                                    <span>Distância: {routeInfo.distance}</span>
+                                    <span className="opacity-30">•</span>
+                                    <span>Pau: {routeInfo.duration}</span>
+                                 </p>
+                              )}
                            </div>
                         </div>
                         <div className="flex items-center gap-3">

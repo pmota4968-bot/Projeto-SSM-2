@@ -387,14 +387,18 @@ export const dbService = {
     async getIncidents(): Promise<EmergencyCase[]> {
         const { data, error } = await supabase.from('incidents').select('*');
         if (error) throw error;
-        return (data || []).map(inc => ({
-            ...inc,
-            companyId: inc.company_id,
-            locationName: inc.location_name,
-            patientName: inc.patient_name,
-            ambulanceState: inc.ambulance_state,
-            coords: inc.coords as [number, number]
-        })) as EmergencyCase[];
+        return (data || []).map(inc => {
+            const ambState = inc.ambulance_state;
+            return {
+                ...inc,
+                companyId: inc.company_id,
+                locationName: inc.location_name,
+                patientName: inc.patient_name,
+                ambulanceState: ambState,
+                ambulanceId: inc.ambulance_id || (ambState?.id), // Restore ID from JSONB if column is missing
+                coords: inc.coords as [number, number]
+            };
+        }) as EmergencyCase[];
     },
 
     async saveIncident(incident: EmergencyCase) {

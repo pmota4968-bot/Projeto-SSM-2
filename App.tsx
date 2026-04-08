@@ -184,6 +184,7 @@ const App: React.FC = () => {
             locationName: newInc.location_name,
             patientName: newInc.patient_name,
             ambulanceState: ambState,
+            ambulanceId: newInc.ambulance_id || ambState?.id, // Restore ID from JSONB payload
             coords: newInc.coords as [number, number]
           }, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
@@ -197,6 +198,7 @@ const App: React.FC = () => {
               locationName: updatedInc.location_name,
               patientName: updatedInc.patient_name,
               ambulanceState: ambState,
+              ambulanceId: updatedInc.ambulance_id || ambState?.id, // Restore ID from JSONB payload
               coords: updatedInc.coords as [number, number]
             } : inc
           ));

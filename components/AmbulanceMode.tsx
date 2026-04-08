@@ -94,8 +94,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
          webrtcService.current = new WebRTCService((stateUpdate) => {
             setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
          });
-         // Peer ID for the ambulance
-         const ambId = incident?.ambulanceId || (incident as any)?.ambulance_id;
+         // Peer ID for the ambulance - Robust resolution
+         const ambId = (incident as any)?.ambulanceId || (incident as any)?.ambulance_id || incident?.ambulanceState?.id;
          const pId = ambId 
             ? `ssm-amb-${ambId}` 
             : imei ? `ssm-amb-${imei}` : `ssm-amb-guest-${adminName.replace(/\s+/g, '-')}`;

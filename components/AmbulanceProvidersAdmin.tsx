@@ -37,6 +37,7 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
         email: '', 
         password: '', 
         imei: '',
+        currentAmbulanceId: '', // Vínculo explícito com a viatura
         status: 'available' as any 
     });
     const [newAmbulance, setNewAmbulance] = useState({ id: '', plate: '', type: 'Básica' as any, imei: '', capacity: 'Padrão' });
@@ -188,6 +189,7 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                 email: newDriver.email,
                 imei: newDriver.imei,
                 authUserId: authData.user.id,
+                currentAmbulanceId: newDriver.currentAmbulanceId,
                 status: newDriver.status
             };
             await dbService.saveDriver(driver);
@@ -201,6 +203,7 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                 email: '', 
                 password: '', 
                 imei: '', 
+                currentAmbulanceId: '',
                 status: 'available' 
             });
             const updated = await dbService.getDrivers();
@@ -563,17 +566,27 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between pt-4 border-t border-slate-200/50">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2 h-2 rounded-full ${
-                                                        driver.status === 'available' ? 'bg-emerald-500' : 
-                                                        driver.status === 'break' ? 'bg-orange-500' : 
-                                                        driver.status === 'on_duty' ? 'bg-blue-500' : 'bg-slate-400'
-                                                    }`}></div>
-                                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                                                        {driver.status === 'available' ? 'Disponível' : 
-                                                         driver.status === 'break' ? 'Em Pausa' : 
-                                                         driver.status === 'on_duty' ? 'Em Serviço' : 'Fora de Serviço'}
-                                                    </span>
+                                                <div className="flex flex-col items-start gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${
+                                                            driver.status === 'available' ? 'bg-emerald-500' : 
+                                                            driver.status === 'break' ? 'bg-orange-500' : 
+                                                            driver.status === 'on_duty' ? 'bg-blue-500' : 'bg-slate-400'
+                                                        }`}></div>
+                                                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                                                            {driver.status === 'available' ? 'Disponível' : 
+                                                            driver.status === 'break' ? 'Em Pausa' : 
+                                                            driver.status === 'on_duty' ? 'Em Serviço' : 'Fora de Serviço'}
+                                                        </span>
+                                                    </div>
+                                                    {driver.currentAmbulanceId && (
+                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-blue-600">
+                                                            <Truck className="w-2.5 h-2.5" />
+                                                            <span className="text-[9px] font-black uppercase tracking-tighter">
+                                                                {ambulances.find(a => a.id === driver.currentAmbulanceId)?.plate || 'Viatura Atribuída'}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button onClick={() => setEditingDriver(driver)} className="text-slate-300 hover:text-red-600 transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
@@ -774,17 +787,35 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                     </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                        <Shield className="w-3 h-3" /> IMEI do Telemóvel (Para Rastreio)
-                                    </label>
-                                    <input 
-                                        required 
-                                        placeholder="Introduza o IMEI de 15 dígitos" 
-                                        value={newDriver.imei} 
-                                        onChange={e => setNewDriver({...newDriver, imei: e.target.value})} 
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
-                                    />
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Shield className="w-3 h-3" /> IMEI do Telemóvel
+                                        </label>
+                                        <input 
+                                            required 
+                                            placeholder="IMEI do Dispositivo" 
+                                            value={newDriver.imei} 
+                                            onChange={e => setNewDriver({...newDriver, imei: e.target.value})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Truck className="w-3 h-3" /> Viatura Atribuída
+                                        </label>
+                                        <select 
+                                            required
+                                            value={newDriver.currentAmbulanceId} 
+                                            onChange={e => setNewDriver({...newDriver, currentAmbulanceId: e.target.value})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
+                                        >
+                                            <option value="">Selecionar Viatura</option>
+                                            {filteredAmbulances.map(amb => (
+                                                <option key={amb.id} value={amb.id}>{amb.plate} ({amb.type})</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div className="pt-4 flex gap-4">
@@ -906,18 +937,35 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                         <input required placeholder="Telefone" value={editingDriver.phone} onChange={e => setEditingDriver({...editingDriver, phone: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" />
                                     </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
-                                    <select 
-                                        value={editingDriver.status} 
-                                        onChange={e => setEditingDriver({...editingDriver, status: e.target.value as any})} 
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
-                                    >
-                                        <option value="available">Disponível</option>
-                                        <option value="on_duty">Em Serviço</option>
-                                        <option value="off_duty">Fora de Serviço</option>
-                                        <option value="break">Em Pausa</option>
-                                    </select>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                                        <select 
+                                            value={editingDriver.status} 
+                                            onChange={e => setEditingDriver({...editingDriver, status: e.target.value as any})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
+                                        >
+                                            <option value="available">Disponível</option>
+                                            <option value="on_duty">Em Serviço</option>
+                                            <option value="off_duty">Fora de Serviço</option>
+                                            <option value="break">Em Pausa</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                            <Truck className="w-3 h-3" /> Viatura Atribuída
+                                        </label>
+                                        <select 
+                                            value={editingDriver.currentAmbulanceId || ''} 
+                                            onChange={e => setEditingDriver({...editingDriver, currentAmbulanceId: e.target.value})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
+                                        >
+                                            <option value="">Nenhuma Viatura</option>
+                                            {filteredAmbulances.map(amb => (
+                                                <option key={amb.id} value={amb.id}>{amb.plate} ({amb.type})</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div className="pt-4 flex gap-4">
                                     <button type="button" onClick={() => setEditingDriver(null)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200">Cancelar</button>

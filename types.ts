@@ -120,6 +120,8 @@ export interface AmbulanceState {
   plate: string;
   type: 'Básica' | 'Avançada' | 'Resgate';
   currentPos: [number, number];
+  current_latitude?: number;  // Adicionado para compatibilidade explícita com GPS real
+  current_longitude?: number; // Adicionado para compatibilidade explícita com GPS real
   phase: 'idle' | 'pending_accept' | 'en_route_to_patient' | 'at_patient' | 'evacuating' | 'at_hospital';
   status: 'available' | 'maintenance' | 'break';
   companyId?: string; // Adicionado para isolamento de empresas de ambulância

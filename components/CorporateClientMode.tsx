@@ -67,6 +67,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const webrtcService = useRef<WebRTCService | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -138,9 +139,23 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
               ambulanceMarkerRef.current.setPosition({ lat: nextPos[0], lng: nextPos[1] });
             }
 
-            // Estimate ETA based on distance (very rough)
-            const dist = Math.sqrt(Math.pow(nextPos[0] - clientLocation[0], 2) + Math.pow(nextPos[1] - clientLocation[1], 2));
-            setEta(Math.max(1, Math.round(dist * 500))); // 500 is a magic number for Maputo scale
+            // Real ETA using Directions Service
+            if (isApiReady) {
+              const directionsService = new google.maps.DirectionsService();
+              directionsService.route({
+                origin: { lat: nextPos[0], lng: nextPos[1] },
+                destination: { lat: clientLocation[0], lng: clientLocation[1] },
+                travelMode: google.maps.TravelMode.DRIVING
+              }, (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK && result && directionsRendererRef.current) {
+                  directionsRendererRef.current.setDirections(result);
+                  const leg = result.routes[0].legs[0];
+                  if (leg && leg.duration) {
+                    setEta(Math.round(leg.duration.value / 60));
+                  }
+                }
+              });
+            }
           }
         } catch (err) {
           console.error("Erro ao rastrear ambulância:", err);
@@ -148,7 +163,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
       }, 5000);
     }
     return () => clearInterval(interval);
-  }, [panicStep, myActiveIncident?.ambulanceId]);
+  }, [panicStep, myActiveIncident?.ambulanceId, isApiReady]);
 
   // Google Maps Initialization
   useEffect(() => {
@@ -185,6 +200,17 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         icon: {
           url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
           scaledSize: new google.maps.Size(40, 40)
+        }
+      });
+
+      // Directions Renderer
+      directionsRendererRef.current = new google.maps.DirectionsRenderer({
+        map: mapRef.current,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: "#2563eb",
+          strokeWeight: 5,
+          strokeOpacity: 0.7
         }
       });
     }

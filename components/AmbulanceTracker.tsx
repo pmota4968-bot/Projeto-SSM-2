@@ -20,6 +20,7 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
     const [eta, setEta] = useState(incident.ambulanceState?.eta || 8);
     const [phase, setPhase] = useState(incident.ambulanceState?.phase || 'en_route_to_patient');
     const [isApiReady, setIsApiReady] = useState(false);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
     // Posicionamento dinâmico
     const patientPos: [number, number] = incident.coords;
@@ -141,6 +142,15 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
 
     return (
         <div className="fixed inset-0 z-[300] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
+            {feedback && (
+                <div className={`fixed top-10 left-1/2 -translate-x-1/2 z-[500] px-6 py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-top-4 ${
+                    feedback.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 
+                    feedback.type === 'error' ? 'bg-red-600 border-red-500 text-white' : 
+                    'bg-blue-600 border-blue-500 text-white'
+                }`}>
+                    {feedback.msg}
+                </div>
+            )}
             <div className="bg-white w-full max-w-6xl h-[85vh] rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200 flex flex-col md:flex-row relative">
                 <button
                     onClick={onClose}
@@ -240,13 +250,19 @@ const AmbulanceTracker: React.FC<AmbulanceTrackerProps> = ({ incident, company, 
 
                     <div className="mt-10 pt-8 border-t border-slate-100 space-y-3">
                         <button 
-                            onClick={() => alert(`A iniciar chamada encriptada para: ${incident.ambulanceId || 'a Viatura'}...`)}
+                            onClick={() => {
+                                setFeedback({ type: 'info', msg: `A iniciar chamada encriptada para: ${incident.ambulanceId || 'a Viatura'}...` });
+                                setTimeout(() => setFeedback(null), 3000);
+                            }}
                             className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
                         >
                             <Phone className="w-4 h-4" /> Ligar para Viatura
                         </button>
                         <button 
-                            onClick={() => alert('A carregar dados de telemetria em tempo real...')}
+                            onClick={() => {
+                                setFeedback({ type: 'info', msg: 'A carregar dados de telemetria em tempo real...' });
+                                setTimeout(() => setFeedback(null), 3000);
+                            }}
                             className="w-full bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
                         >
                             <Activity className="w-4 h-4" /> Abrir Telemetria Médica

@@ -32,6 +32,7 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
     const [editingAmbulance, setEditingAmbulance] = useState<AmbulanceState | null>(null);
     const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
     // Form States
     const [newAmbulance, setNewAmbulance] = useState({
@@ -86,7 +87,7 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             };
 
             await dbService.saveAmbulance(ambulance);
-            alert("Viatura registada com sucesso!");
+            setFeedback({ type: 'success', msg: "Viatura registada com sucesso!" });
             setShowAddAmbulance(false);
             setNewAmbulance({
                 id: '',
@@ -95,9 +96,11 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 imei: '',
                 capacity: 'Padrão'
             });
-        } catch (error) {
+            setTimeout(() => setFeedback(null), 4000);
+        } catch (error: any) {
             console.error("Erro ao salvar viatura:", error);
-            alert("Erro ao salvar viatura.");
+            setFeedback({ type: 'error', msg: `Erro ao salvar viatura: ${error.message}` });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }
@@ -138,7 +141,7 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             };
 
             await dbService.saveDriver(driver);
-            alert("Motorista registado com sucesso!");
+            setFeedback({ type: 'success', msg: "Motorista registado com sucesso!" });
             setShowAddDriver(false);
             setNewDriver({ 
                 name: '', 
@@ -153,9 +156,11 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             
             const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
             onUpdateDrivers(updatedDrivers);
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
             console.error("Erro ao salvar motorista:", error);
-            alert(`Erro ao salvar motorista: ${error.message}`);
+            setFeedback({ type: 'error', msg: `Erro ao salvar motorista: ${error.message}` });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }
@@ -272,6 +277,16 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                         {activeTab === 'drivers' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-red-600 rounded-full"></div>}
                     </button>
                 </div>
+
+                {feedback && (
+                    <div className={`p-4 rounded-2xl border mb-6 animate-in slide-in-from-top-2 duration-300 flex items-center gap-3 ${
+                        feedback.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700'
+                    }`}>
+                        {feedback.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+                        <p className="text-xs font-black uppercase tracking-widest">{feedback.msg}</p>
+                    </div>
+                )}
+
                 <div className="pb-4">
                     {activeTab === 'fleet' ? (
                         <button 
@@ -619,17 +634,35 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                    <Shield className="w-3 h-3" /> IMEI do Telemóvel (Para Rastreio)
-                                </label>
-                                <input 
-                                    required 
-                                    placeholder="Introduza o IMEI de 15 dígitos" 
-                                    value={newDriver.imei} 
-                                    onChange={e => setNewDriver({...newDriver, imei: e.target.value})} 
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
-                                />
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                        <Shield className="w-3 h-3" /> IMEI do Telemóvel (Para Rastreio)
+                                    </label>
+                                    <input 
+                                        required 
+                                        placeholder="IMEI de 15 dígitos" 
+                                        value={newDriver.imei} 
+                                        onChange={e => setNewDriver({...newDriver, imei: e.target.value})} 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                        <Truck className="w-3 h-3" /> Viatura Atribuída
+                                    </label>
+                                    <select 
+                                        required 
+                                        value={newDriver.currentAmbulanceId} 
+                                        onChange={e => setNewDriver({...newDriver, currentAmbulanceId: e.target.value})} 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Selecionar Viatura...</option>
+                                        {ambulances.map(amb => (
+                                            <option key={amb.id} value={amb.id}>{amb.id} - {amb.plate}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="pt-4 flex gap-4">
@@ -797,18 +830,33 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
-                                <select 
-                                    value={editingDriver.status} 
-                                    onChange={e => setEditingDriver({...editingDriver, status: e.target.value as any})} 
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
-                                >
-                                    <option value="available">Disponível</option>
-                                    <option value="on_duty">Em Serviço</option>
-                                    <option value="off_duty">Fora de Serviço</option>
-                                    <option value="break">Em Pausa</option>
-                                </select>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Viatura Atribuída</label>
+                                    <select 
+                                        value={editingDriver.currentAmbulanceId} 
+                                        onChange={e => setEditingDriver({...editingDriver, currentAmbulanceId: e.target.value})} 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Nenhuma Viatura</option>
+                                        {ambulances.map(amb => (
+                                            <option key={amb.id} value={amb.id}>{amb.id} - {amb.plate}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado Operacional</label>
+                                    <select 
+                                        value={editingDriver.status} 
+                                        onChange={e => setEditingDriver({...editingDriver, status: e.target.value as any})} 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="available">Disponível</option>
+                                        <option value="on_duty">Em Serviço</option>
+                                        <option value="break">Pausa</option>
+                                        <option value="offline">Fora de Serviço</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <button 

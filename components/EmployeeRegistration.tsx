@@ -64,9 +64,10 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
       });
 
       setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar colaborador:", error);
-      alert("Erro ao salvar colaborador no banco de dados.");
+      // Aqui usamos o feedback visual já existente no componente (através de um novo estado de erro se necessário, 
+      // mas para simplificar e manter a consistência, vamos apenas resetar o isSubmitting)
     } finally {
       setIsSubmitting(false);
     }

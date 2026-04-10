@@ -46,6 +46,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    const [driverDetails, setDriverDetails] = useState<Driver | null>(null);
    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
    const [isApiReady, setIsApiReady] = useState(false);
+   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
    // WebRTC State
    const [webrtcState, setWebrtcState] = useState<WebRTCState>({
@@ -192,7 +193,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
          };
       } else if (timeLeft === 0 && incident?.ambulanceState?.phase === 'pending_accept') {
          onUpdateAmbulance(incident.id, null);
-         alert("Timeout de Aceitação: O despacho foi removido e reatribuído.");
+         setFeedback({ type: 'info', msg: "Timeout de Aceitação: Despacho reatribuído." });
+         setTimeout(() => setFeedback(null), 4000);
       }
       return () => clearInterval(timer);
    }, [incident?.id, incident?.ambulanceState?.phase]);
@@ -370,7 +372,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       onUpdateStatus(incident!.id, 'closed');
       setShowConclusionModal(false);
       auditLogger.log({ id: driverDetails?.id || 'UNKNOWN_DRV', name: adminName, role: 'MOTORISTA_AMB' }, 'MISSION_FINALIZED_WITH_REPORT', incident!.id);
-      alert("Operação Concluída. Relatório enviado para o Centro de Comando.");
+      setFeedback({ type: 'success', msg: "Operação Concluída. Relatório enviado." });
+      setTimeout(() => setFeedback(null), 4000);
    };
 
    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -378,7 +381,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
       if (!file) return;
 
       if (file.size > 2 * 1024 * 1024) {
-         alert("A imagem deve ter menos de 2MB.");
+         setFeedback({ type: 'error', msg: "A imagem deve ter menos de 2MB." });
+         setTimeout(() => setFeedback(null), 4000);
          return;
       }
 
@@ -405,7 +409,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
             console.log("Avatar atualizado em todos os níveis.");
          } catch (err) {
             console.error("Erro ao atualizar avatar:", err);
-            alert("Erro ao atualizar avatar.");
+            setFeedback({ type: 'error', msg: "Erro ao atualizar avatar." });
+            setTimeout(() => setFeedback(null), 4000);
          } finally {
             setIsUpdatingAvatar(false);
          }
@@ -427,7 +432,8 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
             console.log(`Estado de serviço alterado para: ${newStatus}`);
          } catch (err) {
             console.error("Erro ao atualizar status:", err);
-            alert("Erro ao mudar estado de serviço.");
+            setFeedback({ type: 'error', msg: "Erro ao mudar estado de serviço." });
+            setTimeout(() => setFeedback(null), 4000);
          }
       }
    };
@@ -493,6 +499,16 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
             </div>
             <button onClick={onLogout} className="p-2 text-slate-500 hover:text-white"><LogOut className="w-5 h-5" /></button>
          </header>
+
+         {feedback && (
+            <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl border text-[10px] font-black uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-top-4 ${
+              feedback.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 
+              feedback.type === 'error' ? 'bg-red-600 border-red-500 text-white' : 
+              'bg-blue-600 border-blue-500 text-white'
+            }`}>
+              {feedback.msg}
+            </div>
+          )}
 
          <div className="flex-1 relative">
             <div ref={mapContainerRef} className="absolute inset-0 z-0 grayscale" />
@@ -563,7 +579,10 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
                               <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-slate-900"></div>
                            </button>
                            <button 
-                              onClick={webrtcState.activeCall ? handleEndCall : () => alert('A iniciar ligação para a central...')}
+                              onClick={webrtcState.activeCall ? handleEndCall : () => {
+                                 setFeedback({ type: 'info', msg: 'A iniciar ligação para a central...' });
+                                 setTimeout(() => setFeedback(null), 3000);
+                              }}
                               className={`p-3 rounded-2xl text-white transition-all active:scale-95 ${webrtcState.activeCall ? 'bg-red-600' : 'bg-blue-600 hover:bg-blue-700'}`}
                            >
                               {webrtcState.activeCall ? <PhoneOff className="w-6 h-6" /> : <Phone className="w-6 h-6" />}

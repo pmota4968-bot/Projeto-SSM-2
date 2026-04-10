@@ -28,6 +28,7 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
         color: '#2563eb'
     });
     const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
     const [selectedDeletionReason, setSelectedDeletionReason] = useState('');
@@ -87,8 +88,7 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
             };
 
             await dbService.saveCompany(companyToSave);
-            // In a real app, we'd trigger a refresh or update local state
-            // For now, assuming parent handles updates via props or we need a local refresh
+            setFeedback({ type: 'success', msg: "Empresa registada com sucesso!" });
             setShowCreateModal(false);
             setNewCompany({
                 name: '',
@@ -98,10 +98,11 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                 phone: '',
                 color: '#2563eb'
             });
-            window.location.reload(); // Simple way to refresh for now
-        } catch (err) {
+            setTimeout(() => setFeedback(null), 5000);
+        } catch (err: any) {
             console.error("Erro ao criar empresa:", err);
-            alert("Erro ao criar empresa. Verifique a consola.");
+            setFeedback({ type: 'error', msg: `Erro ao criar empresa: ${err.message}` });
+            setTimeout(() => setFeedback(null), 5000);
         } finally {
             setIsSubmitting(false);
         }
@@ -115,11 +116,13 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
         try {
             const { dbService } = await import('../services/dbService');
             await dbService.updateCompany(editingCompany.id, editingCompany);
+            setFeedback({ type: 'success', msg: "Dados da empresa atualizados!" });
             setEditingCompany(null);
-            window.location.reload();
-        } catch (err) {
+            setTimeout(() => setFeedback(null), 5000);
+        } catch (err: any) {
             console.error("Erro ao atualizar empresa:", err);
-            alert("Erro ao atualizar empresa. Verifique a consola.");
+            setFeedback({ type: 'error', msg: `Erro ao atualizar: ${err.message}` });
+            setTimeout(() => setFeedback(null), 5000);
         } finally {
             setIsSubmitting(false);
         }
@@ -137,14 +140,16 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
         try {
             const { dbService } = await import('../services/dbService');
             await dbService.deleteCompany(deletingCompanyId, reason);
+            setFeedback({ type: 'success', msg: "Empresa desativada e arquivada." });
             setShowDeleteModal(false);
             setDeletingCompanyId(null);
             setSelectedDeletionReason('');
             setCustomDeletionReason('');
-            window.location.reload();
-        } catch (err) {
+            setTimeout(() => setFeedback(null), 5000);
+        } catch (err: any) {
             console.error("Erro ao apagar empresa:", err);
-            alert("Erro ao apagar empresa. Verifique a consola.");
+            setFeedback({ type: 'error', msg: `Erro ao desativar: ${err.message}` });
+            setTimeout(() => setFeedback(null), 5000);
         } finally {
             setIsSubmitting(false);
         }
@@ -465,6 +470,22 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {feedback && (
+                <div className={`p-8 rounded-[2.5rem] border animate-in slide-in-from-top-4 duration-500 flex items-center gap-5 ${
+                    feedback.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-red-50 border-red-100 text-red-800'
+                }`}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
+                        feedback.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                        {feedback.type === 'success' ? <CheckCircle2 className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Notificação de Segurança</p>
+                        <p className="text-base font-black uppercase tracking-tight">{feedback.msg}</p>
                     </div>
                 </div>
             )}

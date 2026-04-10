@@ -21,6 +21,7 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
   const [editingAmbulance, setEditingAmbulance] = useState<AmbulanceState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
   const handleAddAmbulance = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,12 +47,14 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
 
       await dbService.saveAmbulance(ambulance);
       onAddAmbulance(ambulance);
+      setFeedback({ type: 'success', msg: "Viatura registada com sucesso!" });
       setShowAddModal(false);
       setNewAmbulance({ id: '', plate: '', type: 'Básica', imei: '', capacity: 'Padrão' });
-      alert("Viatura registada com sucesso!");
-    } catch (error) {
+      setTimeout(() => setFeedback(null), 4000);
+    } catch (error: any) {
       console.error("Erro ao salvar viatura:", error);
-      alert("Erro ao salvar viatura no banco de dados.");
+      setFeedback({ type: 'error', msg: `Erro ao salvar viatura: ${error.message || 'Erro desconhecido'}` });
+      setTimeout(() => setFeedback(null), 4000);
     } finally {
       setIsSubmitting(false);
     }
@@ -63,11 +66,13 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
     setIsSaving(true);
     try {
       await dbService.saveAmbulance(editingAmbulance);
-      alert("Viatura atualizada com sucesso!");
+      setFeedback({ type: 'success', msg: "Dados da viatura atualizados!" });
       setEditingAmbulance(null);
-    } catch (error) {
+      setTimeout(() => setFeedback(null), 4000);
+    } catch (error: any) {
       console.error("Erro ao atualizar viatura:", error);
-      alert("Erro ao atualizar viatura.");
+      setFeedback({ type: 'error', msg: "Erro ao atualizar viatura." });
+      setTimeout(() => setFeedback(null), 4000);
     } finally {
       setIsSaving(false);
     }
@@ -99,12 +104,21 @@ const FleetManagement: React.FC<FleetManagementProps> = ({ ambulances, drivers, 
       <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex justify-between items-center">
           <h3 className="text-lg font-black text-slate-900 font-corporate uppercase tracking-tight">Inventário de Unidades Móveis</h3>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-slate-950 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all"
-          >
-            <Plus className="w-4 h-4" /> Registar Nova Viatura
-          </button>
+          <div className="flex items-center gap-4">
+            {feedback && (
+              <div className={`px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest animate-in slide-in-from-right-2 ${
+                feedback.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-red-50 border-red-100 text-red-600'
+              }`}>
+                {feedback.msg}
+              </div>
+            )}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-slate-950 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all"
+            >
+              <Plus className="w-4 h-4" /> Registar Nova Viatura
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">

@@ -27,6 +27,7 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
     const [search, setSearch] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'fleet' | 'drivers'>('overview');
 
     // Child form states
@@ -116,12 +117,13 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
 
             if (authError) throw authError;
 
-            alert('Provedor e Gestor registados com sucesso!');
+            setFeedback({ type: 'success', msg: 'Provedor e Gestor registados com sucesso!' });
             setShowCreateModal(false);
-            window.location.reload(); 
+            setTimeout(() => setFeedback(null), 5000);
         } catch (err: any) {
             console.error("Erro ao criar provedor:", err);
-            alert(`Erro: ${err.message}`);
+            setFeedback({ type: 'error', msg: `Erro: ${err.message}` });
+            setTimeout(() => setFeedback(null), 5000);
         } finally {
             setIsSubmitting(false);
         }
@@ -147,12 +149,14 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                 performance: { totalIncidents: 0, acceptanceRate: 100, avgResponseTime: 0 }
             };
             await dbService.saveAmbulance(ambulance);
-            alert("Viatura registada com sucesso!");
+            setFeedback({ type: 'success', msg: "Viatura registada com sucesso!" });
             setShowAddAmbulance(false);
             setNewAmbulance({ id: '', plate: '', type: 'Básica', imei: '', capacity: 'Padrão' });
-        } catch (error) {
+            setTimeout(() => setFeedback(null), 4000);
+        } catch (error: any) {
             console.error("Erro ao salvar viatura:", error);
-            alert("Erro ao salvar viatura.");
+            setFeedback({ type: 'error', msg: "Erro ao salvar viatura." });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }
@@ -194,7 +198,7 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             };
             await dbService.saveDriver(driver);
 
-            alert("Motorista registado com sucesso!");
+            setFeedback({ type: 'success', msg: "Motorista registado com sucesso!" });
             setShowAddDriver(false);
             setNewDriver({ 
                 name: '', 
@@ -208,9 +212,11 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             });
             const updated = await dbService.getDrivers();
             onUpdateDrivers(updated);
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
             console.error("Erro ao salvar motorista:", error);
-            alert(`Erro ao salvar motorista: ${error.message}`);
+            setFeedback({ type: 'error', msg: `Erro ao salvar motorista: ${error.message}` });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }
@@ -790,11 +796,11 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                            <Shield className="w-3 h-3" /> IMEI do Telemóvel
+                                            <Shield className="w-3 h-3 text-blue-500" /> IMEI do Telemóvel (Rastreio)
                                         </label>
                                         <input 
                                             required 
-                                            placeholder="IMEI do Dispositivo" 
+                                            placeholder="Ex: 8654321..." 
                                             value={newDriver.imei} 
                                             onChange={e => setNewDriver({...newDriver, imei: e.target.value})} 
                                             className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
@@ -802,17 +808,17 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                            <Truck className="w-3 h-3" /> Viatura Atribuída
+                                            <Truck className="w-3 h-3 text-red-500" /> Viatura Atribuída
                                         </label>
                                         <select 
-                                            required
+                                            required 
                                             value={newDriver.currentAmbulanceId} 
                                             onChange={e => setNewDriver({...newDriver, currentAmbulanceId: e.target.value})} 
-                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
                                         >
-                                            <option value="">Selecionar Viatura</option>
+                                            <option value="">Selecionar Viatura...</option>
                                             {filteredAmbulances.map(amb => (
-                                                <option key={amb.id} value={amb.id}>{amb.plate} ({amb.type})</option>
+                                                <option key={amb.id} value={amb.id}>{amb.id} - {amb.plate}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -939,31 +945,29 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
-                                        <select 
-                                            value={editingDriver.status} 
-                                            onChange={e => setEditingDriver({...editingDriver, status: e.target.value as any})} 
-                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
-                                        >
-                                            <option value="available">Disponível</option>
-                                            <option value="on_duty">Em Serviço</option>
-                                            <option value="off_duty">Fora de Serviço</option>
-                                            <option value="break">Em Pausa</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                            <Truck className="w-3 h-3" /> Viatura Atribuída
-                                        </label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Viatura Atribuída</label>
                                         <select 
                                             value={editingDriver.currentAmbulanceId || ''} 
                                             onChange={e => setEditingDriver({...editingDriver, currentAmbulanceId: e.target.value})} 
-                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none"
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
                                         >
                                             <option value="">Nenhuma Viatura</option>
                                             {filteredAmbulances.map(amb => (
-                                                <option key={amb.id} value={amb.id}>{amb.plate} ({amb.type})</option>
+                                                <option key={amb.id} value={amb.id}>{amb.id} - {amb.plate}</option>
                                             ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
+                                        <select 
+                                            value={editingDriver.status} 
+                                            onChange={e => setEditingDriver({...editingDriver, status: e.target.value as any})} 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer"
+                                        >
+                                            <option value="available">Disponível</option>
+                                            <option value="on_duty">Em Serviço</option>
+                                            <option value="break">Em Pausa</option>
+                                            <option value="offline">Fora de Serviço</option>
                                         </select>
                                     </div>
                                 </div>

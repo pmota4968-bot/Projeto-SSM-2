@@ -228,10 +228,12 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             const { error } = await supabase.from('ambulances').delete().eq('id', id);
             if (error) throw error;
             // Real-time listener in App.tsx will update the state
-            alert("Viatura eliminada com sucesso!");
+            setFeedback({ type: 'success', msg: "Viatura eliminada com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error) {
             console.error("Erro ao eliminar viatura:", error);
-            alert("Erro ao eliminar viatura.");
+            setFeedback({ type: 'error', msg: "Erro ao eliminar viatura." });
+            setTimeout(() => setFeedback(null), 4000);
         }
     };
 
@@ -241,10 +243,12 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             await dbService.deleteDriver(id);
             const updated = await dbService.getDrivers();
             onUpdateDrivers(updated);
-            alert("Motorista removido com sucesso!");
+            setFeedback({ type: 'success', msg: "Motorista removido com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error) {
             console.error(error);
-            alert("Erro ao eliminar motorista.");
+            setFeedback({ type: 'error', msg: "Erro ao eliminar motorista." });
+            setTimeout(() => setFeedback(null), 4000);
         }
     };
 
@@ -254,12 +258,14 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
         setIsSubmitting(true);
         try {
             await dbService.saveAmbulance(editingAmbulance);
-            alert("Viatura atualizada com sucesso!");
+            setFeedback({ type: 'success', msg: "Viatura atualizada com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
             setEditingAmbulance(null);
             // Real-time listener in App.tsx will update the state
         } catch (error) {
             console.error("Erro ao atualizar viatura:", error);
-            alert("Erro ao atualizar viatura.");
+            setFeedback({ type: 'error', msg: "Erro ao atualizar viatura." });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }
@@ -270,12 +276,14 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
         if (!editingDriver) return;
         try {
             await dbService.saveDriver(editingDriver);
-            alert("Motorista atualizado com sucesso!");
+            setFeedback({ type: 'success', msg: "Motorista atualizado com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
             setEditingDriver(null);
             const updated = await dbService.getDrivers();
             onUpdateDrivers(updated);
         } catch (error) {
-            alert("Erro ao atualizar motorista.");
+            setFeedback({ type: 'error', msg: "Erro ao atualizar motorista." });
+            setTimeout(() => setFeedback(null), 4000);
         }
     };
 

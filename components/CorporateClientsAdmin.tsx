@@ -132,7 +132,8 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
         if (!deletingCompanyId) return;
         const reason = selectedDeletionReason === 'Outro' ? customDeletionReason : selectedDeletionReason;
         if (!reason) {
-            alert("Por favor, selecione um motivo.");
+            setFeedback({ type: 'error', msg: "Por favor, selecione um motivo profissional." });
+            setTimeout(() => setFeedback(null), 4000);
             return;
         }
 
@@ -322,13 +323,13 @@ const CorporateClientsAdmin: React.FC<CorporateClientsAdminProps> = ({ employees
                                 <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between flex-wrap gap-4">
                                     <div className="flex gap-4">
                                         <button 
-                                            onClick={() => alert(`A carregar histórico clínico de: ${p.name}...`)}
+                                            onClick={() => setFeedback({ type: 'success', msg: `Histórico clínico de: ${p.name} em processamento...` })}
                                             className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 active:scale-95"
                                         >
                                             <ClipboardList className="w-4 h-4" /> Ver Histórico Clínico
                                         </button>
                                         <button 
-                                            onClick={() => alert(`A abrir ficha técnica de: ${p.name}...`)}
+                                            onClick={() => setFeedback({ type: 'success', msg: `A abrir ficha técnica de: ${p.name}...` })}
                                             className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
                                         >
                                             Editar Ficha

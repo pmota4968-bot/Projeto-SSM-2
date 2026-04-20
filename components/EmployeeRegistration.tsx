@@ -12,6 +12,7 @@ interface EmployeeRegistrationProps {
 const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, onAddEmployee }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -66,8 +67,8 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error: any) {
       console.error("Erro ao salvar colaborador:", error);
-      // Aqui usamos o feedback visual já existente no componente (através de um novo estado de erro se necessário, 
-      // mas para simplificar e manter a consistência, vamos apenas resetar o isSubmitting)
+      setErrorMsg(`Erro ao registar colaborador: ${error.message}`);
+      setTimeout(() => setErrorMsg(null), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -95,6 +96,18 @@ const EmployeeRegistration: React.FC<EmployeeRegistrationProps> = ({ companyId, 
           <div>
             <p className="text-emerald-900 font-black uppercase text-sm">Cadastro Concluído</p>
             <p className="text-emerald-700 text-xs font-medium">O colaborador foi adicionado à base médica e aparecerá imediatamente na listagem.</p>
+          </div>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 p-6 rounded-[2.5rem] flex items-center gap-4 animate-in slide-in-from-top-4">
+          <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-red-900 font-black uppercase text-sm">Erro no Cadastro</p>
+            <p className="text-red-700 text-xs font-medium">{errorMsg}</p>
           </div>
         </div>
       )}

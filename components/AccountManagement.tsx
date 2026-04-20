@@ -23,6 +23,7 @@ const AccountManagement: React.FC<{ onClose: () => void, companies?: Company[] }
   const [password, setPassword] = useState(''); // Adicionado para Supabase
   const [isCreatingNewCompany, setIsCreatingNewCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
+  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   // Form State para Criação/Edição
   const [formData, setFormData] = useState<Partial<AdminUser>>({
@@ -119,24 +120,26 @@ const AccountManagement: React.FC<{ onClose: () => void, companies?: Company[] }
         };
         setAccounts([newUser, ...accounts]);
 
-        // Log Audit
+       // Log Audit
         auditLogger.log({ id: 'ADM-001', name: 'Carson Mucavele', role: 'ADMIN_SSM' }, 'DATA_EXPORT_PDF', 'ADMIN', `Nova conta criada: ${formData.email} (${formData.role})`);
 
-        alert('Identidade criada com sucesso no Supabase! O utilizador já pode fazer login.');
+        setStatus({ type: 'success', message: 'Identidade criada com sucesso no Supabase! O utilizador já pode fazer login.' });
+        setTimeout(() => setView('list'), 2000);
       } else {
         // Edit flow (updates both DB and state)
         if (selectedUser) {
           await dbService.updateProfile(selectedUser.id, formData);
           setAccounts(prev => prev.map(a => a.id === selectedUser.id ? { ...a, ...(formData as AdminUser) } : a));
-          alert('Informações da conta atualizadas com sucesso na base de dados.');
+          setStatus({ type: 'success', message: 'Informações da conta atualizadas com sucesso.' });
+          setTimeout(() => setView('list'), 2000);
         }
       }
-
-      setView('list');
     } catch (err: any) {
-      alert(`Erro ao processar conta: ${err.message}`);
+      console.error("Erro na submissão:", err);
+      setStatus({ type: 'error', message: `Erro ao processar conta: ${err.message}` });
     } finally {
       setIsSubmitting(false);
+      setTimeout(() => setStatus(null), 5000);
     }
   };
 
@@ -151,7 +154,20 @@ const AccountManagement: React.FC<{ onClose: () => void, companies?: Company[] }
   };
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[700px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[700px] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+
+      {/* Feedback Status */}
+      {status && (
+        <div className={`absolute top-24 left-1/2 -translate-x-1/2 z-[100] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 border ${
+          status.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-red-600 border-red-500 text-white'
+        }`}>
+          {status.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+          <span className="text-sm font-black uppercase tracking-widest">{status.message}</span>
+          <button onClick={() => setStatus(null)} className="ml-4 p-1 hover:bg-white/20 rounded-lg transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Header Fixo */}
       <div className="bg-slate-900 p-8 text-white shrink-0">

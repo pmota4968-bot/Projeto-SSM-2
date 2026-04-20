@@ -172,10 +172,12 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             const { error } = await supabase.from('ambulances').delete().eq('id', id);
             if (error) throw error;
             // O realtime e listener no App.tsx cuidará da remoção na UI
-            alert("Viatura removida com sucesso!");
+            setFeedback({ type: 'success', msg: "Viatura removida com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error) {
             console.error("Erro ao eliminar viatura:", error);
-            alert("Erro ao eliminar viatura.");
+            setFeedback({ type: 'error', msg: "Erro ao eliminar viatura." });
+            setTimeout(() => setFeedback(null), 4000);
         }
     };
 
@@ -185,10 +187,12 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             await dbService.deleteDriver(id);
             const updatedDrivers = await dbService.getDrivers();
             onUpdateDrivers(updatedDrivers);
-            alert("Motorista eliminado com sucesso!");
+            setFeedback({ type: 'success', msg: "Motorista eliminado com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error) {
             console.error("Delete Error:", error);
-            alert("Erro ao remover motorista.");
+            setFeedback({ type: 'error', msg: "Erro ao remover motorista." });
+            setTimeout(() => setFeedback(null), 4000);
         }
     };
 
@@ -198,12 +202,14 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         setIsSubmitting(true);
         try {
             await dbService.saveAmbulance(editingAmbulance);
-            alert("Viatura atualizada com sucesso!");
+            setFeedback({ type: 'success', msg: "Viatura atualizada com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
             setEditingAmbulance(null);
             // Realtime fará o resto
         } catch (error) {
             console.error("Erro ao atualizar viatura:", error);
-            alert("Erro ao atualizar viatura.");
+            setFeedback({ type: 'error', msg: "Erro ao atualizar viatura." });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }
@@ -215,14 +221,16 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         setIsSubmitting(true);
         try {
             await dbService.saveDriver(editingDriver);
-            alert("Motorista atualizado com sucesso!");
+            setFeedback({ type: 'success', msg: "Motorista atualizado com sucesso!" });
+            setTimeout(() => setFeedback(null), 4000);
             setEditingDriver(null);
             
             const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
             onUpdateDrivers(updatedDrivers);
         } catch (error) {
             console.error("Erro ao atualizar motorista:", error);
-            alert("Erro ao atualizar motorista.");
+            setFeedback({ type: 'error', msg: "Erro ao atualizar motorista." });
+            setTimeout(() => setFeedback(null), 4000);
         } finally {
             setIsSubmitting(false);
         }

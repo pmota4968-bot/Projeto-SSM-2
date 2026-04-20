@@ -115,6 +115,10 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
             setIsUploading(false);
           }
         };
+        img.onerror = () => {
+          showToast('error', 'Erro ao carregar a imagem selecionada.');
+          setIsUploading(false);
+        };
       };
       reader.onerror = () => {
         showToast('error', 'Erro ao ler o ficheiro.');

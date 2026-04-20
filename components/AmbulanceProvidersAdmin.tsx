@@ -182,85 +182,32 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             setFeedback({ type: 'error', msg: "Por favor, preencha todos os campos obrigatórios." });
             return;
         }
-
         setIsSubmitting(true);
-        setFeedback({ type: 'success', msg: "A processar registo de motorista..." });
+        setFeedback({ type: 'success', msg: "A iniciar registo..." });
 
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("A operação excedeu o tempo limite (15s). Verifique a sua ligação.")), 15000)
+            setTimeout(() => reject(new Error("A operação excedeu o tempo limite. Verifique no painel se o motorista foi criado.")), 25000)
         );
 
         try {
-            // 1. Create Auth User with Timeout
-            const signUpPromise = supabase.auth.signUp({
-                email: newDriver.email,
-                password: newDriver.password,
-                options: {
-                    data: {
-                        full_name: newDriver.name,
-                        role: 'MOTORISTA_AMB',
-                        phone: newDriver.phone,
-                        company_id: selectedCompanyId,
-                    }
-                }
-            });
-
-            const { data: authData, error: authError } = await (Promise.race([signUpPromise, timeoutPromise]) as Promise<any>);
-
-            if (authError) {
-                if (authError.message.includes('already registered')) {
-                    throw new Error("Este e-mail já está em uso por outro utilizador.");
-                }
-                throw authError;
-            }
-            
-            if (!authData?.user) throw new Error("Erro ao criar utilizador de autenticação.");
-
-            // 1.5 Ensure Public Profile exists (This prevents the FK violation on the drivers table)
-            setFeedback({ type: 'success', msg: "A preparar perfil do motorista..." });
-            await dbService.updateProfile(authData.user.id, {
-                name: newDriver.name,
-                role: 'MOTORISTA_AMB' as any,
-                companyId: selectedCompanyId
-            });
-
-            // Small extra delay for good measure
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // 2. Save Driver Record linked to Auth User with Timeout
-            const driver: Partial<Driver> = {
-                companyId: selectedCompanyId,
-                name: newDriver.name,
-                licenseNumber: newDriver.licenseNumber,
-                phone: newDriver.phone,
-                email: newDriver.email,
-                imei: newDriver.imei,
-                authUserId: authData.user.id,
-                currentAmbulanceId: newDriver.currentAmbulanceId,
-                status: newDriver.status
-            };
-
-            const savePromise = dbService.saveDriver(driver);
-            await Promise.race([savePromise, timeoutPromise]);
+            await Promise.race([
+                dbService.registerDriverFullFlow(
+                    newDriver, 
+                    selectedCompanyId, 
+                    (msg) => setFeedback({ type: 'success', msg })
+                ),
+                timeoutPromise
+            ]);
 
             setFeedback({ type: 'success', msg: "Motorista registado com sucesso!" });
             setShowAddDriver(false);
-            setNewDriver({ 
-                name: '', 
-                licenseNumber: '', 
-                phone: '', 
-                email: '', 
-                password: '', 
-                imei: '', 
-                currentAmbulanceId: '',
-                status: 'available' 
-            });
+            setNewDriver({ name: '', licenseNumber: '', email: '', password: '', phone: '', imei: '', currentAmbulanceId: '', status: 'available' });
             const updated = await dbService.getDrivers();
             onUpdateDrivers(updated);
             setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
-            console.error("Erro ao salvar motorista:", error);
-            setFeedback({ type: 'error', msg: error.message || "Erro ao salvar motorista." });
+            console.error("Erro ao registar:", error);
+            setFeedback({ type: 'error', msg: error.message || "Erro inesperado ao registar motorista." });
             setTimeout(() => setFeedback(null), 6000);
         } finally {
             setIsSubmitting(false);

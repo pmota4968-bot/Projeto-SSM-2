@@ -374,6 +374,104 @@ export const dbService = {
         throw lastError;
     },
 
+    /**
+     * Master Orchestrator for Driver Registration
+     * Handles the entire flow from Auth to Profile to Driver Record with high resilience.
+     */
+    async registerDriverFullFlow(
+        newDriver: any, 
+        companyId: string, 
+        onStatusUpdate?: (msg: string) => void
+    ) {
+        // 1. Create Auth Account
+        onStatusUpdate?.("A criar conta de acesso...");
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: newDriver.email,
+            password: newDriver.password,
+            options: {
+                data: {
+                    full_name: newDriver.name,
+                    role: 'MOTORISTA_AMB',
+                    phone: newDriver.phone,
+                    company_id: companyId,
+                }
+            }
+        });
+
+        if (authError) {
+            if (authError.message.includes('already registered')) {
+                throw new Error("Este e-mail já está registado no sistema.");
+            }
+            throw authError;
+        }
+        if (!authData?.user) throw new Error("Falha na criação de identidade no Supabase.");
+
+        const authUserId = authData.user.id;
+
+        // 2. Resilience Loop for Profile and Driver Record
+        // We allow up to 10 seconds for everything to synchronize
+        let attempts = 0;
+        const maxAttempts = 5;
+        const delayMs = 2000;
+
+        onStatusUpdate?.("A sincronizar com a base de dados...");
+
+        while (attempts < maxAttempts) {
+            try {
+                // Try to create/update Profile
+                // We OMIT 'phone' here because we confirmed the 'profiles' table doesn't have it
+                await supabase.from('profiles').upsert({
+                    id: authUserId,
+                    full_name: newDriver.name,
+                    role: 'MOTORISTA_AMB',
+                    company_id: companyId,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+
+                // Try to create Driver Record
+                const driverPayload = {
+                    company_id: companyId,
+                    name: newDriver.name,
+                    license_number: newDriver.licenseNumber,
+                    phone: newDriver.phone,
+                    email: newDriver.email,
+                    imei: newDriver.imei,
+                    auth_user_id: authUserId,
+                    status: 'available',
+                    avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(newDriver.name)}&background=random&color=fff`
+                };
+
+                const { error: driverError } = await supabase.from('drivers').upsert(driverPayload);
+                
+                if (!driverError) {
+                    onStatusUpdate?.("Registo concluído com sucesso!");
+                    return { authUserId, success: true };
+                }
+
+                // If it's a FK error, we wait and retry
+                if (driverError.code === '23503') {
+                    console.warn(`FK Violation (Attempt ${attempts + 1}). Retrying in ${delayMs}ms...`);
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                    continue;
+                }
+
+                throw driverError;
+            } catch (err: any) {
+                // If it's a FK error from the profile upsert or driver upsert
+                if (err.code === '23503') {
+                    console.warn(`FK Violation (Catch) (Attempt ${attempts + 1}). Retrying...`);
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                    continue;
+                }
+                throw err;
+            }
+        }
+
+        throw new Error("O servidor demorou demasiado tempo a sincronizar. Por favor, verifique se o motorista aparece na lista em alguns momentos.");
+    },
+
     async updateDriverByAuthId(authUserId: string, updates: any) {
         const payload: any = {};
         if (updates.name) payload.name = updates.name;

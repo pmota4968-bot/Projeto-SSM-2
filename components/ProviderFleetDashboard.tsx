@@ -116,69 +116,23 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         }
 
         setIsSubmitting(true);
-        setFeedback({ type: 'success', msg: "A processar registo..." }); // Initial feedback
+        setFeedback({ type: 'success', msg: "A iniciar registo..." });
 
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("A operação excedeu o tempo limite (15s). Verifique a sua ligação.")), 15000)
+            setTimeout(() => reject(new Error("A operação excedeu o tempo limite. Verifique no painel se o motorista foi criado.")), 25000)
         );
 
         try {
-            // 1. Create Auth User with Timeout
-            const signUpPromise = supabase.auth.signUp({
-                email: newDriver.email,
-                password: newDriver.password,
-                options: {
-                    data: {
-                        full_name: newDriver.name,
-                        role: 'MOTORISTA_AMB',
-                        phone: newDriver.phone,
-                        company_id: currentUser.companyId,
-                    }
-                }
-            });
-
-            const { data: authData, error: authError } = await (Promise.race([signUpPromise, timeoutPromise]) as Promise<any>);
-
-            if (authError) {
-                // Specific error messages for Supabase Auth
-                if (authError.message.includes('already registered')) {
-                    throw new Error("Este e-mail já está registado no sistema.");
-                }
-                throw authError;
-            }
-            
-            if (!authData?.user) throw new Error("Falha na criação de identidade. Tente novamente.");
-
-            // 1.5 Ensure Public Profile exists (This prevents the FK violation on the drivers table)
-            setFeedback({ type: 'success', msg: "A preparar perfil do motorista..." });
-            await dbService.updateProfile(authData.user.id, {
-                name: newDriver.name,
-                role: 'MOTORISTA_AMB' as any,
-                companyId: currentUser.companyId
-            });
-
-            // Small extra delay for good measure
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // 2. Save Driver Record with Timeout
-            const driver: Partial<Driver> = {
-                companyId: currentUser.companyId,
-                name: newDriver.name,
-                licenseNumber: newDriver.licenseNumber,
-                phone: newDriver.phone,
-                email: newDriver.email,
-                imei: newDriver.imei,
-                authUserId: authData.user.id,
-                status: newDriver.status,
-                currentAmbulanceId: newDriver.currentAmbulanceId
-            };
-
-            const savePromise = dbService.saveDriver(driver);
-            await Promise.race([savePromise, timeoutPromise]);
+            await Promise.race([
+                dbService.registerDriverFullFlow(
+                    newDriver, 
+                    currentUser.companyId, 
+                    (msg) => setFeedback({ type: 'success', msg })
+                ),
+                timeoutPromise
+            ]);
 
             setFeedback({ type: 'success', msg: "Motorista registado com sucesso!" });
-            
-            // Clear form and close modal
             setShowAddDriver(false);
             setNewDriver({ 
                 name: '', 

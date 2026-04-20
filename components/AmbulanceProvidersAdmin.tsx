@@ -220,7 +220,6 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             setFeedback({ type: 'success', msg: "A preparar perfil do motorista..." });
             await dbService.updateProfile(authData.user.id, {
                 name: newDriver.name,
-                phone: newDriver.phone,
                 role: 'MOTORISTA_AMB' as any,
                 companyId: selectedCompanyId
             });

@@ -418,17 +418,22 @@ export const dbService = {
 
         while (attempts < maxAttempts) {
             try {
-                // Try to create/update Profile
-                // We OMIT 'phone' here because we confirmed the 'profiles' table doesn't have it
-                await supabase.from('profiles').upsert({
-                    id: authUserId,
-                    full_name: newDriver.name,
-                    role: 'MOTORISTA_AMB',
-                    company_id: companyId,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
+                // 2. POLLING: Wait for the profile to be created by the database trigger
+                // This is the "Deep Fix": we stop competing with the database trigger
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('id', authUserId)
+                    .single();
 
-                // Try to create Driver Record
+                if (profileError || !profile) {
+                    console.warn(`Aguardar que o servidor crie o perfil... (Tentativa ${attempts + 1})`);
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, delayMs));
+                    continue;
+                }
+
+                // 3. Save Driver Record (Now we are SURE the profile/identity exists)
                 const driverPayload = {
                     company_id: companyId,
                     name: newDriver.name,
@@ -448,9 +453,9 @@ export const dbService = {
                     return { authUserId, success: true };
                 }
 
-                // If it's a FK error, we wait and retry
+                // If even here we get a FK error, it might be the drivers -> auth.users link
                 if (driverError.code === '23503') {
-                    console.warn(`FK Violation (Attempt ${attempts + 1}). Retrying in ${delayMs}ms...`);
+                    console.warn(`FK Violation no motorista (Attempt ${attempts + 1}). Retrying...`);
                     attempts++;
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                     continue;
@@ -458,18 +463,13 @@ export const dbService = {
 
                 throw driverError;
             } catch (err: any) {
-                // If it's a FK error from the profile upsert or driver upsert
-                if (err.code === '23503') {
-                    console.warn(`FK Violation (Catch) (Attempt ${attempts + 1}). Retrying...`);
-                    attempts++;
-                    await new Promise(resolve => setTimeout(resolve, delayMs));
-                    continue;
-                }
-                throw err;
+                console.error("Erro durante o polling de registo:", err);
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, delayMs));
             }
         }
 
-        throw new Error("O servidor demorou demasiado tempo a sincronizar. Por favor, verifique se o motorista aparece na lista em alguns momentos.");
+        throw new Error("O servidor demorou demasiado tempo a reconhecer a nova conta. O motorista foi criado mas a sincronização final pode demorar alguns minutos a aparecer na lista.");
     },
 
     async updateDriverByAuthId(authUserId: string, updates: any) {

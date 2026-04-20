@@ -108,10 +108,23 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
 
     const handleAddDriver = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Basic validation before starting
+        if (!newDriver.email || !newDriver.password || !newDriver.name) {
+            setFeedback({ type: 'error', msg: "Por favor, preencha todos os campos obrigatórios." });
+            return;
+        }
+
         setIsSubmitting(true);
+        setFeedback({ type: 'success', msg: "A processar registo..." }); // Initial feedback
+
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("A operação excedeu o tempo limite (15s). Verifique a sua ligação.")), 15000)
+        );
+
         try {
-            // 1. Create Auth User
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            // 1. Create Auth User with Timeout
+            const signUpPromise = supabase.auth.signUp({
                 email: newDriver.email,
                 password: newDriver.password,
                 options: {
@@ -124,10 +137,19 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 }
             });
 
-            if (authError) throw authError;
-            if (!authData.user) throw new Error("Erro ao criar utilizador de autenticação.");
+            const { data: authData, error: authError } = await (Promise.race([signUpPromise, timeoutPromise]) as Promise<any>);
 
-            // 2. Save Driver Record linked to Auth User
+            if (authError) {
+                // Specific error messages for Supabase Auth
+                if (authError.message.includes('already registered')) {
+                    throw new Error("Este e-mail já está registado no sistema.");
+                }
+                throw authError;
+            }
+            
+            if (!authData?.user) throw new Error("Falha na criação de identidade. Tente novamente.");
+
+            // 2. Save Driver Record with Timeout
             const driver: Partial<Driver> = {
                 companyId: currentUser.companyId,
                 name: newDriver.name,
@@ -140,8 +162,12 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 currentAmbulanceId: newDriver.currentAmbulanceId
             };
 
-            await dbService.saveDriver(driver);
+            const savePromise = dbService.saveDriver(driver);
+            await Promise.race([savePromise, timeoutPromise]);
+
             setFeedback({ type: 'success', msg: "Motorista registado com sucesso!" });
+            
+            // Clear form and close modal
             setShowAddDriver(false);
             setNewDriver({ 
                 name: '', 
@@ -154,13 +180,19 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 currentAmbulanceId: ''
             });
             
+            // Refresh list
             const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
             onUpdateDrivers(updatedDrivers);
+            
             setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
-            console.error("Erro ao salvar motorista:", error);
-            setFeedback({ type: 'error', msg: `Erro ao salvar motorista: ${error.message}` });
-            setTimeout(() => setFeedback(null), 4000);
+            console.error("Erro no registo de motorista:", error);
+            setFeedback({ 
+                type: 'error', 
+                msg: error.message || "Ocorreu um erro inesperado ao salvar o motorista." 
+            });
+            // Keep error visible for a bit longer
+            setTimeout(() => setFeedback(null), 6000);
         } finally {
             setIsSubmitting(false);
         }

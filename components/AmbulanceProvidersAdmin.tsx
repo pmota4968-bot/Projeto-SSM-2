@@ -133,6 +133,12 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
         e.preventDefault();
         if (!selectedCompanyId) return;
         setIsSubmitting(true);
+        setFeedback({ type: 'success', msg: "A registar viatura..." });
+
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("A operação excedeu o tempo limite. Verifique a sua ligação.")), 15000)
+        );
+
         try {
             const ambulance: AmbulanceState = {
                 id: newAmbulance.id,
@@ -148,15 +154,17 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                 distance: 0,
                 performance: { totalIncidents: 0, acceptanceRate: 100, avgResponseTime: 0 }
             };
-            await dbService.saveAmbulance(ambulance);
+            
+            await Promise.race([dbService.saveAmbulance(ambulance), timeoutPromise]);
+            
             setFeedback({ type: 'success', msg: "Viatura registada com sucesso!" });
             setShowAddAmbulance(false);
             setNewAmbulance({ id: '', plate: '', type: 'Básica', imei: '', capacity: 'Padrão' });
             setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
             console.error("Erro ao salvar viatura:", error);
-            setFeedback({ type: 'error', msg: "Erro ao salvar viatura." });
-            setTimeout(() => setFeedback(null), 4000);
+            setFeedback({ type: 'error', msg: error.message || "Erro ao salvar viatura." });
+            setTimeout(() => setFeedback(null), 6000);
         } finally {
             setIsSubmitting(false);
         }
@@ -164,11 +172,27 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
 
     const handleAddDriver = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedCompanyId) return;
+        if (!selectedCompanyId) {
+            setFeedback({ type: 'error', msg: "Erro: Selecione um provedor primeiro." });
+            return;
+        }
+
+        // Basic validation
+        if (!newDriver.email || !newDriver.password || !newDriver.name) {
+            setFeedback({ type: 'error', msg: "Por favor, preencha todos os campos obrigatórios." });
+            return;
+        }
+
         setIsSubmitting(true);
+        setFeedback({ type: 'success', msg: "A processar registo de motorista..." });
+
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("A operação excedeu o tempo limite (15s). Verifique a sua ligação.")), 15000)
+        );
+
         try {
-            // 1. Create Auth User
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            // 1. Create Auth User with Timeout
+            const signUpPromise = supabase.auth.signUp({
                 email: newDriver.email,
                 password: newDriver.password,
                 options: {
@@ -181,10 +205,18 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                 }
             });
 
-            if (authError) throw authError;
-            if (!authData.user) throw new Error("Erro ao criar utilizador de autenticação.");
+            const { data: authData, error: authError } = await (Promise.race([signUpPromise, timeoutPromise]) as Promise<any>);
 
-            // 2. Save Driver Record linked to Auth User
+            if (authError) {
+                if (authError.message.includes('already registered')) {
+                    throw new Error("Este e-mail já está em uso por outro utilizador.");
+                }
+                throw authError;
+            }
+            
+            if (!authData?.user) throw new Error("Erro ao criar utilizador de autenticação.");
+
+            // 2. Save Driver Record linked to Auth User with Timeout
             const driver: Partial<Driver> = {
                 companyId: selectedCompanyId,
                 name: newDriver.name,
@@ -196,7 +228,9 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
                 currentAmbulanceId: newDriver.currentAmbulanceId,
                 status: newDriver.status
             };
-            await dbService.saveDriver(driver);
+
+            const savePromise = dbService.saveDriver(driver);
+            await Promise.race([savePromise, timeoutPromise]);
 
             setFeedback({ type: 'success', msg: "Motorista registado com sucesso!" });
             setShowAddDriver(false);
@@ -215,8 +249,8 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
             console.error("Erro ao salvar motorista:", error);
-            setFeedback({ type: 'error', msg: `Erro ao salvar motorista: ${error.message}` });
-            setTimeout(() => setFeedback(null), 4000);
+            setFeedback({ type: 'error', msg: error.message || "Erro ao salvar motorista." });
+            setTimeout(() => setFeedback(null), 6000);
         } finally {
             setIsSubmitting(false);
         }

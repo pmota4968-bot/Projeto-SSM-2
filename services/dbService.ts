@@ -150,7 +150,6 @@ export const dbService = {
         if (updates.name) payload.full_name = updates.name;
         if (updates.role) payload.role = updates.role;
         if (updates.companyId) payload.company_id = updates.companyId;
-        if (updates.phone) payload.phone = updates.phone;
         if (updates.email) payload.email = updates.email;
         if (updates.avatar_url) payload.avatar_url = updates.avatar_url;
         
@@ -172,18 +171,37 @@ export const dbService = {
         }
 
         console.log(`Upserting profile for ${id} with payload:`, payload);
-        const { data, error, count } = await supabase
-            .from('profiles')
-            .upsert({ id, ...payload }, { onConflict: 'id' })
-            .select();
-            
-        if (error) {
+        
+        // Implement retry logic for Foreign Key constraint violations (PROFILES_ID_FKEY)
+        // This handles cases where auth.users might not be immediately consistent
+        let retries = 3;
+        let lastError = null;
+
+        while (retries > 0) {
+            const { data, error } = await supabase
+                .from('profiles')
+                .upsert({ id, ...payload }, { onConflict: 'id' })
+                .select();
+                
+            if (!error) {
+                console.log("Profile upsert success");
+                return data;
+            }
+
+            // Check if it's a Foreign Key violation (23503)
+            if (error.code === '23503') {
+                console.warn(`Foreign Key violation ao criar perfil. Tentando novamente... (${retries - 1} restantes)`);
+                lastError = error;
+                retries--;
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s
+                continue;
+            }
+
             console.error("Error upserting profile in DB:", error);
             throw error;
         }
-        
-        console.log("Profile upsert result:", { data, count });
-        return data;
+
+        throw lastError;
     },
 
     // Employees

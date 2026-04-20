@@ -149,9 +149,17 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             
             if (!authData?.user) throw new Error("Falha na criação de identidade. Tente novamente.");
 
-            // Small delay to ensure DB consistency / trigger execution
-            setFeedback({ type: 'success', msg: "Identidade criada. A sincronizar dados..." });
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 1.5 Ensure Public Profile exists (This prevents the FK violation on the drivers table)
+            setFeedback({ type: 'success', msg: "A preparar perfil do motorista..." });
+            await dbService.updateProfile(authData.user.id, {
+                name: newDriver.name,
+                phone: newDriver.phone,
+                role: 'MOTORISTA_AMB' as any,
+                companyId: currentUser.companyId
+            });
+
+            // Small extra delay for good measure
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // 2. Save Driver Record with Timeout
             const driver: Partial<Driver> = {

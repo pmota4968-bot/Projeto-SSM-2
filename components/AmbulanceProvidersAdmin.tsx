@@ -216,9 +216,17 @@ const AmbulanceProvidersAdmin: React.FC<AmbulanceProvidersAdminProps> = ({ compa
             
             if (!authData?.user) throw new Error("Erro ao criar utilizador de autenticação.");
 
-            // Small delay to ensure DB consistency / trigger execution
-            setFeedback({ type: 'success', msg: "Identidade criada. A finalizar registo..." });
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 1.5 Ensure Public Profile exists (This prevents the FK violation on the drivers table)
+            setFeedback({ type: 'success', msg: "A preparar perfil do motorista..." });
+            await dbService.updateProfile(authData.user.id, {
+                name: newDriver.name,
+                phone: newDriver.phone,
+                role: 'MOTORISTA_AMB' as any,
+                companyId: selectedCompanyId
+            });
+
+            // Small extra delay for good measure
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // 2. Save Driver Record linked to Auth User with Timeout
             const driver: Partial<Driver> = {

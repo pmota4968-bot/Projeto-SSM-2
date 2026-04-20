@@ -328,13 +328,32 @@ export const dbService = {
             avatar_url: driver.avatar
         };
 
-        if (driver.id) {
-            payload.id = driver.id;
+        if (driver.id) payload.id = driver.id;
+
+        // Implement retry logic for Foreign Key constraint violations
+        // This handles cases where auth.users might not be immediately consistent
+        // or background triggers (like profile creation) haven't finished yet.
+        let retries = 3;
+        let lastError = null;
+
+        while (retries > 0) {
+            const { data, error } = await supabase.from('drivers').upsert(payload);
+            if (!error) return data;
+
+            // Check if it's a Foreign Key violation (23503 is the PostgreSQL code)
+            if (error.code === '23503') {
+                console.warn(`Tentativa de salvar motorista falhou (FK violation). Tentativas restantes: ${retries - 1}`);
+                lastError = error;
+                retries--;
+                // Wait 1 second before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+            }
+
+            throw error; // Other errors should be thrown immediately
         }
 
-        const { data, error } = await supabase.from('drivers').upsert(payload);
-        if (error) throw error;
-        return data;
+        throw lastError;
     },
 
     async updateDriverByAuthId(authUserId: string, updates: any) {

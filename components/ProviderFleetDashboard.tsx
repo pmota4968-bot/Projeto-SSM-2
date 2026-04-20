@@ -149,6 +149,10 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
             
             if (!authData?.user) throw new Error("Falha na criação de identidade. Tente novamente.");
 
+            // Small delay to ensure DB consistency / trigger execution
+            setFeedback({ type: 'success', msg: "Identidade criada. A sincronizar dados..." });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             // 2. Save Driver Record with Timeout
             const driver: Partial<Driver> = {
                 companyId: currentUser.companyId,

@@ -427,46 +427,62 @@ export const dbService = {
                     .single();
 
                 if (profileError || !profile) {
-                    console.warn(`Aguardar que o servidor crie o perfil... (Tentativa ${attempts + 1})`);
+                    // Specific check for RLS Permission Denied (42501)
+                    if (profileError?.code === '42501') {
+                        console.warn("RLS bloqueou visualização do perfil, mas a conta existe. Prosseguir para criação do motorista.");
+                        // Break circle and try creating driver directly
+                        break; 
+                    }
+                    
+                    console.warn(`Aguardar sincronização (Perfil não visível)... (Tentativa ${attempts + 1})`);
                     attempts++;
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                     continue;
                 }
 
-                // 3. Save Driver Record (Now we are SURE the profile/identity exists)
-                const driverPayload = {
-                    company_id: companyId,
-                    name: newDriver.name,
-                    license_number: newDriver.licenseNumber,
-                    phone: newDriver.phone,
-                    email: newDriver.email,
-                    imei: newDriver.imei,
-                    auth_user_id: authUserId,
-                    status: 'available',
-                    avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(newDriver.name)}&background=random&color=fff`
-                };
-
-                const { error: driverError } = await supabase.from('drivers').upsert(driverPayload);
-                
-                if (!driverError) {
-                    onStatusUpdate?.("Registo concluído com sucesso!");
-                    return { authUserId, success: true };
-                }
-
-                // If even here we get a FK error, it might be the drivers -> auth.users link
-                if (driverError.code === '23503') {
-                    console.warn(`FK Violation no motorista (Attempt ${attempts + 1}). Retrying...`);
-                    attempts++;
-                    await new Promise(resolve => setTimeout(resolve, delayMs));
-                    continue;
-                }
-
-                throw driverError;
+                // If profile found, proceed immediately
+                break;
             } catch (err: any) {
                 console.error("Erro durante o polling de registo:", err);
                 attempts++;
                 await new Promise(resolve => setTimeout(resolve, delayMs));
             }
+        }
+
+        // 3. Final Step: Save Driver Record
+        // We use a small delay here to ensure 'auth.users' visibility even if polling failed
+        onStatusUpdate?.("A finalizar registo do motorista...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const driverPayload = {
+            company_id: companyId,
+            name: newDriver.name,
+            license_number: newDriver.licenseNumber,
+            phone: newDriver.phone,
+            email: newDriver.email,
+            imei: newDriver.imei,
+            auth_user_id: authUserId,
+            status: 'available',
+            avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(newDriver.name)}&background=random&color=fff`
+        };
+
+        let driverAttempts = 3;
+        while (driverAttempts > 0) {
+            const { error: driverError } = await supabase.from('drivers').upsert(driverPayload);
+            
+            if (!driverError) {
+                onStatusUpdate?.("Registo concluído com sucesso!");
+                return { authUserId, success: true };
+            }
+
+            if (driverError.code === '23503') {
+                console.warn(`FK Violation no motorista. Retrying... (${driverAttempts-1} restantes)`);
+                driverAttempts--;
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                continue;
+            }
+
+            throw driverError;
         }
 
         throw new Error("O servidor demorou demasiado tempo a reconhecer a nova conta. O motorista foi criado mas a sincronização final pode demorar alguns minutos a aparecer na lista.");

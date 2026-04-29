@@ -74,8 +74,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (webrtcState.incomingCall && !activeCommIncidentId && !incomingCallIncident) {
-      // Se receber uma chamada, tentamos associar a um SOS recente
-      let recentSOS = incidents.find(i => i.status === 'active' && i.priority === EmergencyPriority.CRITICAL);
+      // Se receber uma chamada, tentamos associar a um SOS recente (nos últimos 5 minutos)
+      let recentSOS = incidents.find(i => {
+        const isSOS = i.status === 'active' && i.priority === EmergencyPriority.CRITICAL;
+        if (!isSOS) return false;
+        
+        const createdAt = i.created_at ? new Date(i.created_at).getTime() : Date.now();
+        return (Date.now() - createdAt) < 300000; // 5 minutos
+      });
       
       if (!recentSOS) {
         const peerId = webrtcState.incomingCall.peer;
@@ -114,15 +120,32 @@ const App: React.FC = () => {
 
   // Global SOS detection to trigger "Incoming Call" alert across all tabs
   useEffect(() => {
+    // Evitar disparar o alerta para incidentes antigos logo ao carregar a página
+    if (prevIncidentsRef.current.length === 0 && incidents.length > 0) {
+      prevIncidentsRef.current = incidents;
+      return;
+    }
+
     const newIncidents = incidents.filter(
       inc => !prevIncidentsRef.current.some(prev => prev.id === inc.id)
     );
 
+    // Só dispara o alerta se o incidente for REALMENTE novo e tiver sido criado nos últimos 2 minutos
+    // Isso evita que um SOS "pendurado" no banco dispare o alerta toda vez que alguém loga
     const sosIncident = newIncidents.find(
-      inc => inc.status === 'active' && inc.priority === EmergencyPriority.CRITICAL && inc.id.startsWith('SOS-')
+      inc => {
+        const isSOS = inc.status === 'active' && inc.priority === EmergencyPriority.CRITICAL && inc.id.startsWith('SOS-');
+        if (!isSOS) return false;
+
+        // Verificação de tempo (Recency Check)
+        const createdAt = inc.created_at ? new Date(inc.created_at).getTime() : Date.now();
+        const now = Date.now();
+        return (now - createdAt) < 120000; // Menos de 2 minutos
+      }
     );
 
     if (sosIncident) {
+      console.log("NOVO SOS DETETADO:", sosIncident);
       setIncomingCallIncident(sosIncident);
     }
 

@@ -110,8 +110,11 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         e.preventDefault();
         
         // Basic validation before starting
-        if (!newDriver.email || !newDriver.password || !newDriver.name) {
-            setFeedback({ type: 'error', msg: "Por favor, preencha todos os campos obrigatórios." });
+        if (!newDriver.email || !newDriver.password || !newDriver.name || !newDriver.currentAmbulanceId) {
+            setFeedback({ 
+                type: 'error', 
+                msg: !newDriver.currentAmbulanceId ? "Deve selecionar uma viatura antes de registar o motorista." : "Por favor, preencha todos os campos obrigatórios." 
+            });
             return;
         }
 
@@ -119,15 +122,19 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         setFeedback({ type: 'success', msg: "A iniciar registo..." });
 
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("A operação excedeu o tempo limite. Verifique no painel se o motorista foi criado.")), 25000)
+            setTimeout(() => reject(new Error("O servidor do Supabase está a demorar demasiado a responder. Por favor, verifique se a ligação à internet está estável ou se a conta foi criada no SQL Editor.")), 60000)
         );
 
         try {
+            console.log("Iniciando processo de registo full-flow...");
             await Promise.race([
                 dbService.registerDriverFullFlow(
                     newDriver, 
                     currentUser.companyId, 
-                    (msg) => setFeedback({ type: 'success', msg })
+                    (msg) => {
+                        console.log(`[Registo]: ${msg}`);
+                        setFeedback({ type: 'success', msg });
+                    }
                 ),
                 timeoutPromise
             ]);
@@ -145,19 +152,20 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                 currentAmbulanceId: ''
             });
             
-            // Refresh list
-            const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
-            onUpdateDrivers(updatedDrivers);
+            // Refresh list com delay para garantir consistência visual
+            setTimeout(async () => {
+                const updatedDrivers = await dbService.getDrivers(currentUser.companyId);
+                onUpdateDrivers(updatedDrivers);
+            }, 1000);
             
             setTimeout(() => setFeedback(null), 4000);
         } catch (error: any) {
-            console.error("Erro no registo de motorista:", error);
+            console.error("ERRO CRÍTICO NO REGISTO:", error);
             setFeedback({ 
                 type: 'error', 
-                msg: error.message || "Ocorreu um erro inesperado ao salvar o motorista." 
+                msg: error.message || "Erro desconhecido durante o registo." 
             });
-            // Keep error visible for a bit longer
-            setTimeout(() => setFeedback(null), 6000);
+            setTimeout(() => setFeedback(null), 10000);
         } finally {
             setIsSubmitting(false);
         }
@@ -667,6 +675,11 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                                             <option key={amb.id} value={amb.id}>{amb.id} - {amb.plate}</option>
                                         ))}
                                     </select>
+                                    {ambulances.length === 0 && (
+                                        <p className="text-[9px] font-black text-red-500 uppercase mt-2 animate-pulse">
+                                            Aviso: Deve registar pelo menos uma viatura antes de adicionar motoristas.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

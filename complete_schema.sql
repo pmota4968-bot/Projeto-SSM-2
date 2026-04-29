@@ -156,31 +156,62 @@ ALTER TABLE public.gps_tracks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.communication_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 
--- Basic RLS Policies (Isolation by company_id)
--- Note: Simplified for the implementation plan. Production might need more granular policies.
+-- 11. Comprehensive RLS Policies
+-- General rule: ADMIN_SSM can see everything. Others see their own company records.
 
-CREATE POLICY "Multi-tenant isolation for companies" ON public.companies
-  FOR ALL USING (auth.jwt() -> 'user_metadata' ->> 'role' = 'ADMIN_SSM' OR id = auth.jwt() -> 'user_metadata' ->> 'company_id');
+-- Drivers
+DROP POLICY IF EXISTS "Drivers isolation" ON public.drivers;
+CREATE POLICY "Drivers isolation" ON public.drivers FOR ALL USING (
+  company_id = auth.jwt() -> 'user_metadata' ->> 'company_id' 
+  OR auth.jwt() -> 'user_metadata' ->> 'role' = 'ADMIN_SSM'
+);
 
-CREATE POLICY "Multi-tenant isolation for profiles" ON public.profiles
-  FOR ALL USING (id = auth.uid() OR company_id = auth.jwt() -> 'user_metadata' ->> 'company_id');
+-- Ambulances
+DROP POLICY IF EXISTS "Ambulance isolation" ON public.ambulances;
+CREATE POLICY "Ambulance isolation" ON public.ambulances FOR ALL USING (
+  company_id = auth.jwt() -> 'user_metadata' ->> 'company_id' 
+  OR auth.jwt() -> 'user_metadata' ->> 'role' = 'ADMIN_SSM'
+);
 
-CREATE POLICY "Multi-tenant isolation for incidents" ON public.incidents
-  FOR ALL USING (
-    auth.jwt() -> 'user_metadata' ->> 'role' IN ('ADMIN_SSM', 'OPERADOR_COORD') 
-    OR company_id = auth.jwt() -> 'user_metadata' ->> 'company_id'
-  );
+-- Profiles
+DROP POLICY IF EXISTS "Profile isolation" ON public.profiles;
+CREATE POLICY "Profile isolation" ON public.profiles FOR ALL USING (
+  id = auth.uid() 
+  OR company_id = auth.jwt() -> 'user_metadata' ->> 'company_id'
+  OR auth.jwt() -> 'user_metadata' ->> 'role' = 'ADMIN_SSM'
+);
+
+-- Employees
+DROP POLICY IF EXISTS "Employee isolation" ON public.employees;
+CREATE POLICY "Employee isolation" ON public.employees FOR ALL USING (
+  company_id = auth.jwt() -> 'user_metadata' ->> 'company_id' 
+);
+
+-- Incidents
+DROP POLICY IF EXISTS "Incident isolation" ON public.incidents;
+CREATE POLICY "Incident isolation" ON public.incidents FOR ALL USING (
+  company_id = auth.jwt() -> 'user_metadata' ->> 'company_id' 
+  OR auth.jwt() -> 'user_metadata' ->> 'role' IN ('ADMIN_SSM', 'OPERADOR_COORD')
+);
+
+-- Resources
+DROP POLICY IF EXISTS "Resource isolation" ON public.resources;
+CREATE POLICY "Resource isolation" ON public.resources FOR ALL USING (
+  company_id = auth.jwt() -> 'user_metadata' ->> 'company_id' 
+  OR auth.jwt() -> 'user_metadata' ->> 'role' = 'ADMIN_SSM'
+);
 
 -- Function to handle new user registration from Supabase Auth
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, role, company_id)
+  INSERT INTO public.profiles (id, full_name, role, company_id, phone)
   VALUES (
     NEW.id,
     NEW.raw_user_meta_data->>'full_name',
     NEW.raw_user_meta_data->>'role',
-    NEW.raw_user_meta_data->>'company_id'
+    NEW.raw_user_meta_data->>'company_id',
+    NEW.raw_user_meta_data->>'phone'
   );
   RETURN NEW;
 END;

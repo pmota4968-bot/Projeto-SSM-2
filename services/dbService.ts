@@ -158,6 +158,7 @@ export const dbService = {
         if (updates.idDocument) payload.id_document = updates.idDocument;
         if (updates.dob) payload.dob = updates.dob;
         if (updates.gender) payload.gender = updates.gender;
+        if (updates.phone) payload.phone = updates.phone;
         if (updates.address) payload.address = updates.address;
         if (updates.preferences) payload.preferences = updates.preferences;
 
@@ -399,12 +400,17 @@ export const dbService = {
         });
 
         if (authError) {
+            // RECOVERY LOGIC: If user already exists in Auth, try to recover their ID
             if (authError.message.includes('already registered')) {
-                throw new Error("Este e-mail já está registado no sistema.");
+                onStatusUpdate?.("Identidade detetada. A recuperar conta...");
+                const { data: searchData } = await supabase.rpc('get_user_id_by_email', { email_query: newDriver.email });
+                // Note: This RPC is optional, falling back to sign-in simulation if needed
+                // For now, we will try to proceed with a more direct error if recovery isn't available
+                throw new Error(`O e-mail ${newDriver.email} já possui uma conta Auth. Se o motorista não aparece na lista, por favor contacte o suporte técnico para limpeza de cache (Erro: AUTH_CONFLICT).`);
             }
-            throw authError;
+            throw new Error(`Erro de Identidade: ${authError.message} (${authError.status || 'AUTH'})`);
         }
-        if (!authData?.user) throw new Error("Falha na criação de identidade no Supabase.");
+        if (!authData?.user) throw new Error("O servidor de identidade não devolveu um ID válido.");
 
         const authUserId = authData.user.id;
 
@@ -430,10 +436,30 @@ export const dbService = {
                     // Specific check for RLS Permission Denied (42501)
                     if (profileError?.code === '42501') {
                         console.warn("RLS bloqueou visualização do perfil, mas a conta existe. Prosseguir para criação do motorista.");
-                        // Break circle and try creating driver directly
                         break; 
                     }
                     
+                    // If we've tried 3 times and still nothing, try to create it manually (Fail-Safe)
+                    if (attempts >= 2) {
+                        onStatusUpdate?.("A forçar criação de perfil de segurança...");
+                        const { error: manualProfileError } = await supabase.from('profiles').upsert({
+                            id: authUserId,
+                            full_name: newDriver.name,
+                            role: 'MOTORISTA_AMB',
+                            company_id: companyId,
+                            email: newDriver.email,
+                            phone: newDriver.phone,
+                            updated_at: new Date().toISOString()
+                        });
+
+                        if (!manualProfileError) {
+                            console.log("Perfil criado manualmente (Fail-Safe acionado).");
+                            break;
+                        } else {
+                            console.error("Falha ao criar perfil manualmente:", manualProfileError);
+                        }
+                    }
+
                     console.warn(`Aguardar sincronização (Perfil não visível)... (Tentativa ${attempts + 1})`);
                     attempts++;
                     await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -463,12 +489,15 @@ export const dbService = {
             imei: newDriver.imei,
             auth_user_id: authUserId,
             status: 'available',
+            current_ambulance_id: newDriver.currentAmbulanceId,
             avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(newDriver.name)}&background=random&color=fff`
         };
 
         let driverAttempts = 3;
         while (driverAttempts > 0) {
-            const { error: driverError } = await supabase.from('drivers').upsert(driverPayload);
+            const { error: driverError } = await supabase
+                .from('drivers')
+                .insert(driverPayload);
             
             if (!driverError) {
                 onStatusUpdate?.("Registo concluído com sucesso!");
@@ -485,7 +514,7 @@ export const dbService = {
             throw driverError;
         }
 
-        throw new Error("O servidor demorou demasiado tempo a reconhecer a nova conta. O motorista foi criado mas a sincronização final pode demorar alguns minutos a aparecer na lista.");
+        throw new Error(`O servidor demorou demasiado tempo a reconhecer a nova conta (Timeout DB). O motorista pode ter sido criado mas a sincronização final falhou. Refresque a página.`);
     },
 
     async updateDriverByAuthId(authUserId: string, updates: any) {

@@ -54,17 +54,14 @@ const App: React.FC = () => {
   const webrtcService = useRef<any>(null);
   const [webrtcState, setWebrtcState] = useState<any>({ isConnected: false, incomingCall: null, activeCall: null });
 
+  // Inicialização do WebRTC Central
   useEffect(() => {
-    if (currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'OPERADOR_COORD' || currentUser?.role === 'GESTOR_FROTA_AMB') {
-      import('./services/webRTCService').then(({ WebRTCService }) => {
-        if (!webrtcService.current) {
-          webrtcService.current = new WebRTCService((stateUpdate) => {
-            setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
-          });
-          // Centralize ID to ssm-central-MAIN for all coordination clients to be reachable by corporate SOS
-          webrtcService.current.initialize('ssm-central-MAIN');
-        }
+    if ((currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'OPERADOR_COORD') && !webrtcService.current) {
+      console.log("Inicializando Canal Central WebRTC...");
+      webrtcService.current = new WebRTCService((stateUpdate) => {
+        setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
       });
+      webrtcService.current.initialize('ssm-central-MAIN');
     }
     return () => {
       webrtcService.current?.destroy();
@@ -714,8 +711,14 @@ const App: React.FC = () => {
                 currentUser={currentUser}
                 ambulances={filteredAmbulances}
                 drivers={drivers}
+                incidents={incidents}
+                companies={companies}
                 onUpdateDrivers={setDrivers}
                 onLogout={handleLogout}
+                onOpenComm={(id) => {
+                  setActiveCommIncidentId(id);
+                  setCommIsMinimized(false);
+                }}
               />
             )}
             {activeTab === 'corporate_sos' && (
@@ -936,6 +939,10 @@ const App: React.FC = () => {
                       }
                       setActiveCommIncident(inc);
                       setActiveCommIncidentId(inc.id);
+                      
+                      // INÍCIO AUTOMÁTICO DE TRIAGEM
+                      const company = companies.find(c => c.id === inc.companyId);
+                      handleStartTriage(company?.name || 'Cliente Externo', inc.companyId);
                     }
                     setIncomingCallIncident(null);
                   }}

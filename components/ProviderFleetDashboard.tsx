@@ -7,25 +7,34 @@ import {
     Shield, CheckCircle2
 } from 'lucide-react';
 import { dbService } from '../services/dbService';
-import { AmbulanceState, Driver, AdminUser } from '../types';
+import { AmbulanceState, Driver, AdminUser, EmergencyCase, Company } from '../types';
 import { supabase } from '../services/supabase';
+import AmbulanceTracker from './AmbulanceTracker';
+import { MessageSquare, Clock, MapPin } from 'lucide-react';
 
 interface ProviderFleetDashboardProps {
     currentUser: AdminUser;
     ambulances: AmbulanceState[];
     drivers: Driver[];
+    incidents: EmergencyCase[];
+    companies: Company[];
     onUpdateDrivers: (drivers: Driver[]) => void;
     onLogout: () => void;
+    onOpenComm: (incidentId: string) => void;
 }
 
 const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({ 
     currentUser, 
     ambulances, 
     drivers, 
+    incidents = [],
+    companies = [],
     onUpdateDrivers,
-    onLogout 
+    onLogout,
+    onOpenComm
 }) => {
-    const [activeTab, setActiveTab] = useState<'fleet' | 'drivers'>('fleet');
+    const [activeTab, setActiveTab] = useState<'fleet' | 'drivers' | 'operations'>('fleet');
+    const [trackingIncident, setTrackingIncident] = useState<EmergencyCase | null>(null);
     const [showAddAmbulance, setShowAddAmbulance] = useState(false);
     const [showAddDriver, setShowAddDriver] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -274,20 +283,24 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
 
             {/* Navigation Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-6 border-b border-slate-200 pb-2">
-                <div className="flex gap-10">
+                <div className="flex gap-4">
                     <button 
                         onClick={() => setActiveTab('fleet')}
-                        className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative ${activeTab === 'fleet' ? 'text-red-600' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'fleet' ? 'bg-red-600 text-white shadow-xl shadow-red-600/20' : 'text-slate-400 hover:text-slate-900 bg-white border border-slate-100 uppercase'}`}
                     >
-                        Gestão de Viaturas
-                        {activeTab === 'fleet' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-red-600 rounded-full"></div>}
+                        Frota de Viaturas
                     </button>
                     <button 
                         onClick={() => setActiveTab('drivers')}
-                        className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative ${activeTab === 'drivers' ? 'text-red-600' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'drivers' ? 'bg-red-600 text-white shadow-xl shadow-red-600/20' : 'text-slate-400 hover:text-slate-900 bg-white border border-slate-100 uppercase'}`}
                     >
-                        Corpo de Motoristas
-                        {activeTab === 'drivers' && <div className="absolute bottom-0 left-0 right-0 h-1 bg-red-600 rounded-full"></div>}
+                        Equipa Médica
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('operations')}
+                        className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'operations' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-slate-400 hover:text-slate-900 bg-white border border-slate-100 uppercase'}`}
+                    >
+                        Monitorização Live
                     </button>
                 </div>
 
@@ -461,6 +474,77 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                         )}
                     </div>
                 )}
+
+                {activeTab === 'operations' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-white p-8 rounded-[3rem] border border-slate-200">
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Monitorização de Emergências</h3>
+                            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Acompanhe as suas unidades em missão real</p>
+                        </div>
+
+                        {incidents.filter(inc => inc.ambulanceState?.companyId === currentUser.companyId).length === 0 ? (
+                            <div className="py-20 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                                <Activity className="w-16 h-16 text-slate-200 mx-auto mb-6" />
+                                <h4 className="text-lg font-bold text-slate-900 uppercase">Nenhuma Missão Activa</h4>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">As missões da sua frota aparecerão aqui em tempo real</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {incidents.filter(inc => inc.ambulanceState?.companyId === currentUser.companyId).map(inc => (
+                                    <div key={inc.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-8 hover:shadow-2xl transition-all border-l-8 border-l-blue-600">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                                                    <Truck className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg font-black text-slate-900 leading-none">{inc.ambulanceId}</h4>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{inc.ambulanceState?.driverName || 'Motorista em Turno'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest animate-pulse">
+                                                Em Missão
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-8">
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Paciente</p>
+                                                <p className="text-xs font-black text-slate-900 uppercase truncate">{inc.patientName || 'Não Identificado'}</p>
+                                            </div>
+                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Clock className="w-3 h-3" /> ETA Central</p>
+                                                <p className="text-xs font-black text-slate-900 uppercase">{inc.ambulanceState?.eta || '--'} Minutos</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <button 
+                                                onClick={() => setTrackingIncident(inc)}
+                                                className="flex-1 bg-slate-900 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                                            >
+                                                <Navigation className="w-4 h-4" /> Rastrear GPS
+                                            </button>
+                                            <button 
+                                                onClick={() => onOpenComm(inc.id)}
+                                                className="flex-1 bg-[#E0F2FE] text-blue-600 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-100 transition-all"
+                                            >
+                                                <MessageSquare className="w-4 h-4" /> Ver Chat OC
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {trackingIncident && (
+                    <AmbulanceTracker 
+                        incident={trackingIncident} 
+                        company={companies.find(c => c.id === trackingIncident.companyId)}
+                        onClose={() => setTrackingIncident(null)}
+                    />
             </div>
 
             {/* Modals */}

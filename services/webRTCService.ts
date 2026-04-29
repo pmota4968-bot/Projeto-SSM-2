@@ -40,9 +40,8 @@ export class WebRTCService {
 
         this.peer.on('error', (err: any) => {
             console.error('PeerJS Error:', err);
-            if (err.type === 'peer-unavailable') {
-                alert('Destinatário não está online no momento.');
-            }
+            this.onStateChange({ isConnected: false });
+            // Removendo alert intrusivo para permitir que a UI lide com o estado de forma inteligente
         });
     }
 

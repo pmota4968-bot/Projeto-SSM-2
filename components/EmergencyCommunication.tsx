@@ -11,7 +11,7 @@ interface EmergencyCommunicationProps {
   company?: Company;
   currentUser?: AdminUser;
   incident?: EmergencyCase;
-  onStartTriage?: (companyName: string) => void;
+  onStartTriage?: (companyName: string, companyId?: string) => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
   onClose?: () => void;
@@ -219,7 +219,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     });
 
     if (activeChannel === 'CLIENTE' && onStartTriage) {
-      onStartTriage(company?.name || 'Cliente Externo');
+      onStartTriage(company?.name || 'Cliente Externo', company?.id);
     }
   };
 
@@ -245,36 +245,36 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
 
   if (isMinimized) {
     return (
-      <div className="bg-slate-900 w-full h-full flex items-center justify-between px-6 py-4 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="bg-slate-950/90 backdrop-blur-md w-full h-full flex items-center justify-between px-4 md:px-8 border border-white/10 animate-in slide-in-from-top-4 duration-500 md:rounded-full">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="relative">
             {isCallActive && <div className="absolute inset-0 bg-blue-500/40 rounded-full animate-ping"></div>}
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white relative z-10 shadow-lg ${isCallActive ? 'bg-blue-600' : 'bg-slate-800'}`}>
-              <Phone className={`w-6 h-6 ${isCallActive ? 'animate-pulse' : ''}`} />
+            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white relative z-10 shadow-lg ${isCallActive ? 'bg-blue-600' : 'bg-slate-800'}`}>
+              <Phone className={`w-4 h-4 md:w-5 md:h-5 ${isCallActive ? 'animate-pulse' : ''}`} />
             </div>
           </div>
           <div className="min-w-0">
-            <h4 className="text-white text-xs font-black uppercase tracking-tight leading-none mb-1 truncate">{company?.name || 'Chamada Directa'}</h4>
+            <h4 className="text-white text-[10px] md:text-xs font-black uppercase tracking-tight leading-none mb-1 truncate">{company?.name || 'Central SSM'}</h4>
             <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${isCallActive ? 'bg-red-500 animate-pulse' : 'bg-slate-400'}`}></div>
-              <p className="text-[10px] font-bold text-slate-400 font-mono tracking-widest leading-none">
-                {isCallActive ? formatDuration(elapsedSeconds) : 'LINE STANDBY'}
+              <div className={`w-1 h-1 rounded-full ${isCallActive ? 'bg-red-500 animate-pulse' : 'bg-slate-400'}`}></div>
+              <p className="text-[8px] md:text-[9px] font-bold text-slate-400 font-mono tracking-widest leading-none">
+                {isCallActive ? formatDuration(elapsedSeconds) : 'STANDBY'}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {isCallActive && (
-            <button onClick={endCall} className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg transition-all active:scale-95">
-              <PhoneOff className="w-5 h-5" />
+            <button onClick={endCall} className="p-2 md:p-2.5 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-all active:scale-95">
+              <PhoneOff className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
           )}
-          <button onClick={onToggleMinimize} className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all shadow-lg active:scale-95">
-            <Maximize2 className="w-5 h-5" />
+          <button onClick={onToggleMinimize} className="p-2 md:p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all shadow-lg active:scale-95">
+            <Maximize2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
-          <button onClick={onClose} className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all shadow-lg active:scale-95">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 md:p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all shadow-lg active:scale-95">
+            <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
         </div>
       </div>

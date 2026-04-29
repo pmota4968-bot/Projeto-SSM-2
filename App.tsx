@@ -529,8 +529,8 @@ const App: React.FC = () => {
     setIncidents(prev => prev.map(inc => inc.id === id ? { ...inc, status } : inc));
   };
 
-  const handleStartTriage = (companyName: string) => {
-    setTriageInitialData({ companyName });
+  const handleStartTriage = (companyName: string, companyId?: string) => {
+    setTriageInitialData({ companyName, companyId });
     setActiveTab('protocols');
     setCommIsMinimized(true);
   };
@@ -853,6 +853,7 @@ const App: React.FC = () => {
                 onAddIncident={(inc) => setIncidents([inc, ...incidents])}
                 initialData={triageInitialData}
                 onNavigate={setActiveTab}
+                companies={companies}
               />
             )}
             {activeTab === 'providers' && <AnalyticsDashboard currentUser={currentUser} companies={filteredCompanies} />}
@@ -955,8 +956,8 @@ const App: React.FC = () => {
 
         {/* Global Emergency Communication Modal / Floating Window */}
         {activeCommIncident && (
-          <div className={`fixed inset-0 z-[150] transition-all duration-500 flex ${commIsMinimized ? 'pointer-events-none items-end justify-end p-8' : 'bg-slate-900/60 backdrop-blur-sm items-center justify-center p-4'}`}>
-            <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-md h-24 rounded-3xl mb-4 mr-4' : 'w-full max-w-5xl h-[85vh] rounded-[3rem]'}`}>
+          <div className={`fixed inset-0 z-[150] transition-all duration-500 flex ${commIsMinimized ? 'pointer-events-none items-start justify-center pt-24 md:pt-8 p-4' : 'bg-slate-900/60 backdrop-blur-sm items-center justify-center p-2 md:p-4'}`}>
+            <div className={`bg-white shadow-2xl overflow-hidden border border-slate-200 relative transition-all duration-500 pointer-events-auto ${commIsMinimized ? 'w-full max-w-[280px] md:max-w-md h-16 md:h-20 rounded-full shadow-blue-500/10' : 'w-full max-w-6xl h-[95vh] md:h-[85vh] rounded-[2rem] md:rounded-[3rem]'}`}>
               <EmergencyCommunication
                 incidentId={activeCommIncident.id}
                 company={companies.find(c => c.id === activeCommIncident.companyId)}

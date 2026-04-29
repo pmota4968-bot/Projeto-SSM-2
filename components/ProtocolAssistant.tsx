@@ -18,11 +18,12 @@ interface TriageData {
 interface ProtocolAssistantProps {
   currentUser: AdminUser;
   onAddIncident?: (incident: EmergencyCase) => void;
-  initialData?: { companyName?: string } | null;
+  initialData?: { companyName?: string; companyId?: string } | null;
   onNavigate?: (tab: string) => void;
+  companies?: Company[];
 }
 
-const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAddIncident, initialData, onNavigate }) => {
+const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAddIncident, initialData, onNavigate, companies = [] }) => {
   const [mode, setMode] = useState<TriageMode>('STRUCTURED_FLOW');
   const [scenario, setScenario] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,12 +35,14 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
   const userCompany = COMPANIES.find(c => c.id === currentUser.companyId);
 
   const [triageData, setTriageData] = useState<TriageData>(() => ({
-    company: initialData?.companyName || userCompany?.name || 'SSM Global Dispatch',
+    company: initialData?.companyName || (userCompany ? userCompany.name : ''),
     patientName: '',
     age: '',
     location: '',
     contact: ''
   }));
+
+  const isCompanyLocked = !!initialData?.companyName || !!userCompany;
 
   // Update company if initialData changes
   React.useEffect(() => {
@@ -190,9 +193,9 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
       status: 'active',
       priority: suggestion.classification,
       coords: [-25.9692 + (Math.random() - 0.5) * 0.01, 32.5732 + (Math.random() - 0.5) * 0.01],
-      patientName: triageData.patientName, // INTEGRADO: Nome vindo do formulário
-      companyId: currentUser.companyId || 'SSM',
-      employeeId: 'EXTERNAL' // Identificador para caso externo
+      patientName: triageData.patientName, 
+      companyId: initialData?.companyId || companies.find(c => c.name === triageData.company)?.id || currentUser.companyId || 'SSM',
+      employeeId: 'EXTERNAL' 
     };
 
     onAddIncident(newCase);
@@ -365,15 +368,26 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5 md:col-span-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                            <Building2 className="w-3 h-3 text-blue-600" /> Empresa Solicitante (Auto-preenchido)
+                            <Building2 className="w-3 h-3 text-blue-600" /> 
+                            {isCompanyLocked ? 'Empresa Solicitante (Vínculo de Perfil Activo)' : 'Seleccionar Empresa (Perfil do Cliente)'}
                           </label>
-                          <input
-                            type="text"
-                            className="w-full bg-blue-50/50 border border-blue-100 rounded-2xl px-6 py-4 text-sm font-black text-blue-900 focus:border-blue-600 outline-none shadow-inner"
-                            placeholder="Nome da Empresa"
-                            value={triageData.company}
-                            readOnly
-                          />
+                          {isCompanyLocked ? (
+                            <div className="w-full bg-blue-50/50 border border-blue-200 rounded-2xl px-6 py-4 flex items-center justify-between shadow-sm">
+                               <span className="text-sm font-black text-blue-900 uppercase tracking-tight">{triageData.company}</span>
+                               <ShieldCheck className="w-5 h-5 text-blue-600" />
+                            </div>
+                          ) : (
+                            <select
+                              className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-black text-slate-900 focus:border-blue-600 outline-none shadow-sm transition-all appearance-none"
+                              value={triageData.company}
+                              onChange={e => setTriageData({...triageData, company: e.target.value})}
+                            >
+                              <option value="">-- Seleccionar Perfil de Empresa --</option>
+                              {companies.map(c => (
+                                <option key={c.id} value={c.name}>{c.name}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Doente</label>

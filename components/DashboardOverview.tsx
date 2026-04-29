@@ -24,7 +24,7 @@ interface DashboardOverviewProps {
   onUpdateIncident?: (incidentId: string, updates: Partial<EmergencyCase>) => void;
   ambulances?: AmbulanceState[];
   companies?: Company[];
-  onStartTriage?: (companyName: string) => void;
+  onStartTriage?: (companyName: string, companyId?: string) => void;
   onOpenComm?: (incidentId: string) => void;
   resources?: any[]; // Adicionado para hospitais
 }
@@ -249,8 +249,8 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                             <Building2 className="w-5 h-5 text-slate-300 shrink-0" />
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Empresa Solicitante</p>
-                              <p className="text-sm font-bold text-slate-700">{company?.name || 'Cliente Particular'}</p>
-                              {company?.address && <p className="text-xs font-medium text-slate-500 mt-1">{company.address}</p>}
+                              <p className="text-sm font-bold text-slate-700">{company?.name || (incident.companyId ? `Corporativo ID: ${incident.companyId}` : 'Cliente Particular')}</p>
+                              {company?.address ? <p className="text-xs font-medium text-slate-500 mt-1">{company.address}</p> : (incident.locationName && !company ? <p className="text-xs font-medium text-orange-500 mt-1 uppercase tracking-tighter font-bold opacity-60">Origem Externa Registada</p> : null)}
                             </div>
                           </div>
                           <div className="flex gap-4">

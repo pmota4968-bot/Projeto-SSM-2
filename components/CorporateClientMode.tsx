@@ -44,6 +44,8 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const myActiveIncident = incidents.find(i => i.id === activeIncidentId || (i.companyId === currentUser.companyId && i.status !== 'resolved'));
   
   const [isCallActive, setIsCallActive] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const callTimerRef = useRef<number | null>(null);
   const [eta, setEta] = useState(8);
   const [ambulancePos, setAmbulancePos] = useState<[number, number]>([-25.965, 32.575]);
 
@@ -111,11 +113,30 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
 
   useEffect(() => {
     setIsCallActive(!!webrtcState.activeCall);
-    if (!webrtcState.activeCall && panicStep === 'active') {
-      setPanicStep('waiting_dispatch');
-      setTimeout(() => setPanicStep('tracking'), 3500);
+    if (webrtcState.activeCall) {
+      if (!callTimerRef.current) {
+        setCallDuration(0);
+        callTimerRef.current = window.setInterval(() => {
+          setCallDuration(prev => prev + 1);
+        }, 1000);
+      }
+    } else {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+      if (panicStep === 'active') {
+        setPanicStep('waiting_dispatch');
+        setTimeout(() => setPanicStep('tracking'), 3500);
+      }
     }
   }, [webrtcState.activeCall]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const company = companies.find(c => c.id === companyId);
   const companyName = company?.name || 'Cliente SSM';
@@ -471,40 +492,57 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                 </div>
               </div>
             </div>
-          </>
-        )}
-      </div>
-
-      {/* Modal de Chamada Ativa */}
-      {isCallActive && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6 animate-in zoom-in-95 duration-300">
-          <div className="w-full max-w-sm bg-white rounded-[3.5rem] p-12 shadow-2xl text-center relative overflow-hidden">
+               {isCallActive && (
+        <div className="fixed inset-0 z-[150] bg-slate-900/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in zoom-in-95 duration-500">
+          <div className="w-full max-w-lg bg-white rounded-[4rem] p-12 shadow-2xl text-center relative overflow-hidden border border-white/20">
             <div className="absolute top-0 left-0 right-0 h-2 bg-red-600 animate-pulse"></div>
-            <div className="w-24 h-24 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-10 relative">
-              <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping"></div>
-              <Phone className="w-10 h-10 relative z-10" />
+            
+            <div className="flex flex-col items-center mb-10">
+              <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 relative">
+                <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping"></div>
+                <PhoneCall className="w-8 h-8 relative z-10" />
+              </div>
+              <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tighter leading-none">Linha Prioritária SSM</h3>
+              <div className={`mt-4 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border transition-all ${webrtcState.remoteStream ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100 animate-pulse'}`}>
+                <div className={`w-2 h-2 rounded-full ${webrtcState.remoteStream ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
+                {webrtcState.remoteStream ? `Chamada Estabelecida • ${formatDuration(callDuration)}` : 'Aguardando Operador...'}
+              </div>
             </div>
 
             {(webrtcState.remoteStream || webrtcState.localStream) && (
-              <div className="relative w-full aspect-video bg-slate-900 rounded-3xl overflow-hidden mb-8 border-4 border-slate-100 shadow-inner">
-                {webrtcState.remoteStream && (
+              <div className="relative w-full aspect-video bg-slate-950 rounded-[2.5rem] overflow-hidden mb-10 border-4 border-slate-50 shadow-2xl group transition-all">
+                {webrtcState.remoteStream ? (
                   <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center animate-spin mb-4">
+                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                    </div>
+                    <p className="text-[10px] font-black text-white uppercase tracking-widest opacity-40">Encriptando Canal...</p>
+                  </div>
                 )}
                 {webrtcState.localStream && (
-                  <div className="absolute bottom-3 right-3 w-28 aspect-video bg-slate-800 rounded-xl overflow-hidden border-2 border-white/20">
+                  <div className="absolute bottom-5 right-5 w-32 aspect-video bg-slate-900 rounded-2xl overflow-hidden border-2 border-white/20 shadow-lg group-hover:scale-110 transition-transform">
                     <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
                   </div>
                 )}
               </div>
             )}
 
-            <h3 className="text-2xl font-black text-slate-900 uppercase font-corporate tracking-tight">Linha Prioritária WebRTC</h3>
-            <p className="text-[11px] font-black text-red-600 uppercase tracking-widest mt-3 animate-pulse">Operador em Linha...</p>
-            <div className="my-10">
-              <p className="text-sm font-medium text-slate-500 leading-relaxed px-4">Mantenha a calma. O despachante está a recolher os dados para o envio imediato da unidade.</p>
+            <div className="mb-10">
+              <p className="text-base font-bold text-slate-500 leading-relaxed px-6">
+                O Centro de Coordenação está a validar a sua posição GPS e a triagem inicial para despacho imediato.
+              </p>
             </div>
-            <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-slate-800 text-white py-6 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.2em] shadow-xl active:scale-95 transition-all">Encerrar Chamada</button>
+            
+            <div className="flex flex-col gap-4">
+              <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+                <Phone className="w-5 h-5" /> Encerrar Chamada
+              </button>
+            </div>
           </div>
+        </div>
+      )}  </div>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Sparkles, Loader2, FileText, CheckCircle2, Shield, Printer, ArrowRight, ArrowLeft, AlertCircle, Info, ClipboardList, Stethoscope, Building2, Send } from 'lucide-react';
+import { Sparkles, Loader2, FileText, CheckCircle2, Shield, Printer, ArrowRight, ArrowLeft, AlertCircle, Info, ClipboardList, Stethoscope, Building2, Send, ShieldCheck } from 'lucide-react';
 import { getProtocolAdvice } from '../services/geminiService';
 import { ProtocolSuggestion, EmergencyPriority, EmergencyCase, AdminUser } from '../types';
 import { PRIORITY_COLORS, COMPANIES } from '../constants';

@@ -1,4 +1,4 @@
-
+// Build Verification: Cleaned JSX Structure - 2026-04-30
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Siren, Phone, MapPin, ShieldCheck, Activity, X,

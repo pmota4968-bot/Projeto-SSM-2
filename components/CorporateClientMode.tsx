@@ -1,4 +1,4 @@
-
+// Build Verification: Cleaned JSX Structure - 2026-04-30
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Siren, Phone, MapPin, ShieldCheck, Activity, X,
@@ -492,59 +492,60 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                 </div>
               </div>
             </div>
-               {isCallActive && (
-        <div className="fixed inset-0 z-[150] bg-slate-900/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in zoom-in-95 duration-500">
-          <div className="w-full max-w-lg bg-white rounded-[4rem] p-12 shadow-2xl text-center relative overflow-hidden border border-white/20">
-            <div className="absolute top-0 left-0 right-0 h-2 bg-red-600 animate-pulse"></div>
-            
-            <div className="flex flex-col items-center mb-10">
-              <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 relative">
-                <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping"></div>
-                <PhoneCall className="w-8 h-8 relative z-10" />
-              </div>
-              <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tighter leading-none">Linha Prioritária SSM</h3>
-              <div className={`mt-4 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border transition-all ${webrtcState.remoteStream ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100 animate-pulse'}`}>
-                <div className={`w-2 h-2 rounded-full ${webrtcState.remoteStream ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
-                {webrtcState.remoteStream ? `Chamada Estabelecida • ${formatDuration(callDuration)}` : 'Aguardando Operador...'}
-              </div>
-            </div>
-
-            {(webrtcState.remoteStream || webrtcState.localStream) && (
-              <div className="relative w-full aspect-video bg-slate-950 rounded-[2.5rem] overflow-hidden mb-10 border-4 border-slate-50 shadow-2xl group transition-all">
-                {webrtcState.remoteStream ? (
-                  <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center animate-spin mb-4">
-                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+            {isCallActive && (
+              <div className="fixed inset-0 z-[150] bg-slate-900/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in zoom-in-95 duration-500">
+                <div className="w-full max-w-lg bg-white rounded-[4rem] p-12 shadow-2xl text-center relative overflow-hidden border border-white/20">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-red-600 animate-pulse"></div>
+                  
+                  <div className="flex flex-col items-center mb-10">
+                    <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 relative">
+                      <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping"></div>
+                      <PhoneCall className="w-8 h-8 relative z-10" />
                     </div>
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest opacity-40">Encriptando Canal...</p>
+                    <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tighter leading-none">Linha Prioritária SSM</h3>
+                    <div className={`mt-4 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border transition-all ${webrtcState.remoteStream ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100 animate-pulse'}`}>
+                      <div className={`w-2 h-2 rounded-full ${webrtcState.remoteStream ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
+                      {webrtcState.remoteStream ? `Chamada Estabelecida • ${formatDuration(callDuration)}` : 'Aguardando Operador...'}
+                    </div>
                   </div>
-                )}
-                {webrtcState.localStream && (
-                  <div className="absolute bottom-5 right-5 w-32 aspect-video bg-slate-900 rounded-2xl overflow-hidden border-2 border-white/20 shadow-lg group-hover:scale-110 transition-transform">
-                    <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+
+                  {(webrtcState.remoteStream || webrtcState.localStream) && (
+                    <div className="relative w-full aspect-video bg-slate-950 rounded-[2.5rem] overflow-hidden mb-10 border-4 border-slate-50 shadow-2xl group transition-all">
+                      {webrtcState.remoteStream ? (
+                        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center animate-spin mb-4">
+                            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                          </div>
+                          <p className="text-[10px] font-black text-white uppercase tracking-widest opacity-40">Encriptando Canal...</p>
+                        </div>
+                      )}
+                      {webrtcState.localStream && (
+                        <div className="absolute bottom-5 right-5 w-32 aspect-video bg-slate-900 rounded-2xl overflow-hidden border-2 border-white/20 shadow-lg group-hover:scale-110 transition-transform">
+                          <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mb-10">
+                    <p className="text-base font-bold text-slate-500 leading-relaxed px-6">
+                      O Centro de Coordenação está a validar a sua posição GPS e a triagem inicial para despacho imediato.
+                    </p>
                   </div>
-                )}
+                  
+                  <div className="flex flex-col gap-4">
+                    <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+                      <Phone className="w-5 h-5" /> Encerrar Chamada
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
-
-            <div className="mb-10">
-              <p className="text-base font-bold text-slate-500 leading-relaxed px-6">
-                O Centro de Coordenação está a validar a sua posição GPS e a triagem inicial para despacho imediato.
-              </p>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-              <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
-                <Phone className="w-5 h-5" /> Encerrar Chamada
-              </button>
-            </div>
-          </div>
-        </div>
-      )}  </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       <style>{`
         .custom-marker { background: transparent !important; border: none !important; }

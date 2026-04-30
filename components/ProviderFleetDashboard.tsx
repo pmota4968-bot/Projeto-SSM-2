@@ -545,6 +545,7 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
                         company={companies.find(c => c.id === trackingIncident.companyId)}
                         onClose={() => setTrackingIncident(null)}
                     />
+                )}
             </div>
 
             {/* Modals */}

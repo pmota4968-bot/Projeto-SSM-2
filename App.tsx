@@ -29,6 +29,7 @@ import { COMPANIES as INITIAL_COMPANIES, ADMINS, AMBULANCES as INITIAL_AMBULANCE
 import { auditLogger } from './services/auditLogger';
 import { supabase } from './services/supabase';
 import { dbService } from './services/dbService';
+import { WebRTCService } from './services/webRTCService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -51,7 +52,7 @@ const App: React.FC = () => {
   const prevIncidentsRef = useRef<EmergencyCase[]>(incidents);
 
   // Global WebRTC for Operator/Central
-  const webrtcService = useRef<any>(null);
+  const webrtcService = useRef<WebRTCService | null>(null);
   const [webrtcState, setWebrtcState] = useState<any>({ isConnected: false, incomingCall: null, activeCall: null });
 
   // Inicialização do WebRTC Central

@@ -171,7 +171,6 @@ export const dbService = {
             payload.avatar_url = updates.avatar;
         }
 
-        console.log(`Upserting profile for ${id} with payload:`, payload);
         
         // Implement retry logic for Foreign Key constraint violations (PROFILES_ID_FKEY)
         // This handles cases where auth.users might not be immediately consistent
@@ -185,13 +184,11 @@ export const dbService = {
                 .select();
                 
             if (!error) {
-                console.log("Profile upsert success");
                 return data;
             }
 
             // Check if it's a Foreign Key violation (23503)
             if (error.code === '23503') {
-                console.warn(`Foreign Key violation ao criar perfil. Tentando novamente... (${retries - 1} restantes)`);
                 lastError = error;
                 retries--;
                 await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s
@@ -361,7 +358,6 @@ export const dbService = {
 
             // Check if it's a Foreign Key violation (23503 is the PostgreSQL code)
             if (error.code === '23503') {
-                console.warn(`Tentativa de salvar motorista falhou (FK violation). Tentativas restantes: ${retries - 1}`);
                 lastError = error;
                 retries--;
                 // Wait 1 second before retrying
@@ -435,7 +431,6 @@ export const dbService = {
                 if (profileError || !profile) {
                     // Specific check for RLS Permission Denied (42501)
                     if (profileError?.code === '42501') {
-                        console.warn("RLS bloqueou visualização do perfil, mas a conta existe. Prosseguir para criação do motorista.");
                         break; 
                     }
                     
@@ -453,14 +448,12 @@ export const dbService = {
                         });
 
                         if (!manualProfileError) {
-                            console.log("Perfil criado manualmente (Fail-Safe acionado).");
                             break;
                         } else {
                             console.error("Falha ao criar perfil manualmente:", manualProfileError);
                         }
                     }
 
-                    console.warn(`Aguardar sincronização (Perfil não visível)... (Tentativa ${attempts + 1})`);
                     attempts++;
                     await new Promise(resolve => setTimeout(resolve, delayMs));
                     continue;
@@ -469,7 +462,6 @@ export const dbService = {
                 // If profile found, proceed immediately
                 break;
             } catch (err: any) {
-                console.error("Erro durante o polling de registo:", err);
                 attempts++;
                 await new Promise(resolve => setTimeout(resolve, delayMs));
             }
@@ -505,7 +497,6 @@ export const dbService = {
             }
 
             if (driverError.code === '23503') {
-                console.warn(`FK Violation no motorista. Retrying... (${driverAttempts-1} restantes)`);
                 driverAttempts--;
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 continue;

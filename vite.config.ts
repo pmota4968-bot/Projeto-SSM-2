@@ -19,8 +19,8 @@ export default defineConfig(({ mode }) => {
     clearScreen: false,
     plugins: [react(), tailwindcss()],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
       'process.env.NODE_ENV': JSON.stringify(mode),
       'global': 'window',
     },

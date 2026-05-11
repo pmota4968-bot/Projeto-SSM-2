@@ -47,6 +47,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [dispatchModalId, setDispatchModalId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dispatchSteps, setDispatchSteps] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'full' | 'compact'>('full');
 
   const getNearbyAmbulances = (incidentCoords: [number, number]) => {
     return ambulances.map(amb => {
@@ -220,17 +221,60 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Chamadas OC Modal removido daqui (agora global no App.tsx) */}
         <div className="lg:col-span-12 space-y-6">
-          <h3 className="text-lg font-black text-slate-900 font-corporate uppercase tracking-tight flex items-center gap-3">Gestão Operacional Live <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div></h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-lg font-black text-slate-900 font-corporate uppercase tracking-tight flex items-center gap-3">
+              Gestão Operacional Live 
+              <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+            </h3>
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button 
+                onClick={() => setViewMode('full')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'full' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                Vista Completa
+              </button>
+              <button 
+                onClick={() => setViewMode('compact')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'compact' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                Vista Compacta
+              </button>
+            </div>
+          </div>
+
+          {/* Pending Triage Summary Bar */}
+          {incidents.filter(i => i.status !== 'closed' && !i.patientName).length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center justify-between animate-in slide-in-from-top duration-500">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+                  <PhoneCall className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-orange-900 leading-none">Triagens Pendentes</p>
+                  <p className="text-[10px] font-bold text-orange-600 uppercase mt-1 tracking-widest">
+                    {incidents.filter(i => i.status !== 'closed' && !i.patientName).length} Chamadas em espera de identificação
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewMode('compact')}
+                className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-orange-200 transition-all"
+              >
+                Gerir Lista
+              </button>
+            </div>
+          )}
+
           <div className="space-y-4">
-            {incidents.length > 0 ? (
-              incidents.map((incident) => {
+            {incidents.filter(i => i.status !== 'closed').length > 0 ? (
+              incidents.filter(i => i.status !== 'closed').map((incident) => {
                 const company = companies.find(c => c.id === incident.companyId);
                 const isExpanded = expandedCaseId === incident.id;
 
                 return (
                   <div key={incident.id} className={`bg-white rounded-[2rem] border border-slate-200 shadow-sm transition-all duration-500 overflow-hidden ${isExpanded ? 'ring-4 ring-blue-600/5 border-blue-100' : 'hover:border-blue-300'}`}>
-                    <div className="p-6 sm:p-8">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className={`${viewMode === 'compact' && !isExpanded ? 'p-4' : 'p-6 sm:p-8'}`}>
+                      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 ${viewMode === 'compact' && !isExpanded ? 'mb-2' : 'mb-6'}`}>
                         <div className="flex items-center gap-4 cursor-pointer" onClick={() => setExpandedCaseId(isExpanded ? null : incident.id)}>
                           <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 overflow-hidden">
                             {company ? <img src={company.logo} alt="Company Logo" className="w-full h-full object-cover" /> : <Activity className="w-7 h-7" />}
@@ -243,29 +287,31 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                         <div className="text-right text-xs font-black text-slate-300 flex items-center gap-2"><Clock className="w-4 h-4" /> {incident.timestamp}</div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                        <div className="space-y-4">
-                          <div className="flex gap-4">
-                            <Building2 className="w-5 h-5 text-slate-300 shrink-0" />
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Empresa Solicitante</p>
-                              <p className="text-sm font-bold text-slate-700">{company?.name || (incident.companyId ? `Corporativo ID: ${incident.companyId}` : 'Cliente Particular')}</p>
-                              {company?.address ? <p className="text-xs font-medium text-slate-500 mt-1">{company.address}</p> : (incident.locationName && !company ? <p className="text-xs font-medium text-orange-500 mt-1 uppercase tracking-tighter font-bold opacity-60">Origem Externa Registada</p> : null)}
+                      {(isExpanded || viewMode === 'full') && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="space-y-4">
+                            <div className="flex gap-4">
+                              <Building2 className="w-5 h-5 text-slate-300 shrink-0" />
+                              <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Empresa Solicitante</p>
+                                <p className="text-sm font-bold text-slate-700">{company?.name || (incident.companyId ? `Corporativo ID: ${incident.companyId}` : 'Cliente Particular')}</p>
+                                {company?.address ? <p className="text-xs font-medium text-slate-500 mt-1">{company.address}</p> : (incident.locationName && !company ? <p className="text-xs font-medium text-orange-500 mt-1 uppercase tracking-tighter font-bold opacity-60">Origem Externa Registada</p> : null)}
+                              </div>
+                            </div>
+                            <div className="flex gap-4">
+                              <MapPin className="w-5 h-5 text-slate-300 shrink-0" />
+                              <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Cenário Capturado por GPS</p><p className="text-sm font-bold text-slate-700">{incident.locationName}</p></div>
+                            </div>
+                            <div className="flex gap-4">
+                              <Stethoscope className="w-5 h-5 text-slate-300 shrink-0" />
+                              <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Descrição</p><p className="text-sm font-bold text-slate-700">{incident.type}</p></div>
                             </div>
                           </div>
-                          <div className="flex gap-4">
-                            <MapPin className="w-5 h-5 text-slate-300 shrink-0" />
-                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Cenário Capturado por GPS</p><p className="text-sm font-bold text-slate-700">{incident.locationName}</p></div>
-                          </div>
-                          <div className="flex gap-4">
-                            <Stethoscope className="w-5 h-5 text-slate-300 shrink-0" />
-                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Descrição</p><p className="text-sm font-bold text-slate-700">{incident.type}</p></div>
+                          <div>
+                            {renderStatusBox(incident)}
                           </div>
                         </div>
-                        <div>
-                          {renderStatusBox(incident)}
-                        </div>
-                      </div>
+                      )}
 
                       <div className="flex flex-wrap items-center gap-3 pt-2">
                         <button onClick={() => setDispatchModalId(incident.id)} disabled={incident.ambulanceState !== undefined || incident.status === 'closed'} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg ${incident.ambulanceState || incident.status === 'closed' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'}`}><Send className="w-4 h-4" /> {incident.status === 'closed' ? 'Histórico de Missão' : (incident.ambulanceState ? 'Unidade em Missão' : 'Despachar Unidade SSM')}</button>
@@ -274,6 +320,17 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                           className="bg-[#E0F2FE] hover:bg-blue-100 text-blue-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
                         >
                           <PhoneCall className="w-4 h-4" /> Canais OC
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Tem certeza que deseja encerrar este caso?')) {
+                              onUpdateIncident?.(incident.id, 'closed');
+                            }
+                          }}
+                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border border-emerald-100"
+                        >
+                          <CheckCircle2 className="w-4 h-4" /> Marcar Resolvido
                         </button>
                       </div>
                     </div>

@@ -135,13 +135,11 @@ const ProviderFleetDashboard: React.FC<ProviderFleetDashboardProps> = ({
         );
 
         try {
-            console.log("Iniciando processo de registo full-flow...");
             await Promise.race([
                 dbService.registerDriverFullFlow(
                     newDriver, 
                     currentUser.companyId, 
                     (msg) => {
-                        console.log(`[Registo]: ${msg}`);
                         setFeedback({ type: 'success', msg });
                     }
                 ),

@@ -58,7 +58,6 @@ const App: React.FC = () => {
   // Inicialização do WebRTC Central
   useEffect(() => {
     if ((currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'OPERADOR_COORD') && !webrtcService.current) {
-      console.log("Inicializando Canal Central WebRTC...");
       webrtcService.current = new WebRTCService((stateUpdate) => {
         setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
       });
@@ -143,7 +142,6 @@ const App: React.FC = () => {
     );
 
     if (sosIncident) {
-      console.log("NOVO SOS DETETADO:", sosIncident);
       setIncomingCallIncident(sosIncident);
     }
 
@@ -153,7 +151,6 @@ const App: React.FC = () => {
   // Fetch Initial Data
   const fetchData = useCallback(async () => {
     try {
-      console.log("Sincronizando dados com o servidor...");
       const [comps, emps, ambs, ress, incs, drvs] = await Promise.all([
         dbService.getCompanies(),
         dbService.getEmployees(),
@@ -307,7 +304,6 @@ const App: React.FC = () => {
 
     try {
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log(`Auth event: ${event}`, session?.user?.id);
         
         if (session?.user) {
           // 1. IMEDIATO: Usar metadados para feedback instantâneo e desbloquear a UI
@@ -335,7 +331,6 @@ const App: React.FC = () => {
             }
 
             if (profileData) {
-              console.log("Enriquecendo utilizador com dados do perfil:", profileData);
               setCurrentUser(prev => ({
                 ...prev,
                 name: profileData.full_name || prev?.name,
@@ -397,14 +392,12 @@ const App: React.FC = () => {
 
   const handleUpdateUser = async (updates: Partial<AdminUser>) => {
     if (currentUser) {
-      console.log(`Iniciando atualização de perfil para ${currentUser.id}:`, updates);
       const updatedUser = { ...currentUser, ...updates };
       setCurrentUser(updatedUser);
 
       try {
         // 1. Persistir no Perfil (DB) - Usando UPSERT agora para garantir criação de linha
         await dbService.updateProfile(currentUser.id, updates);
-        console.log("1/3: Perfil persistido no banco de dados.");
         
         // 2. Sincronizar com Metadados da Auth (para resiliência total no login)
         const metadataUpdates: any = {};
@@ -418,21 +411,17 @@ const App: React.FC = () => {
             data: metadataUpdates
           });
           if (authError) console.warn("Aviso na atualização de metadados Auth:", authError);
-          else console.log("2/3: Metadados da Auth sincronizados.");
         }
         
         // 3. Sincronização Adicional (Motoristas)
         if (currentUser.role === 'MOTORISTA_AMB') {
-          console.log("Sincronizando record operacional de motorista...");
           await dbService.updateDriverByAuthId(currentUser.id, {
             name: updates.name,
             phone: updates.phone,
             avatar_url: updates.avatar
           });
-          console.log("3/3: Ficha de motorista atualizada.");
         }
         
-        console.log("Persistência concluída com sucesso.");
       } catch (err: any) {
         console.error("ERRO CRÍTICO NA PERSISTÊNCIA:", err);
       }
@@ -523,8 +512,25 @@ const App: React.FC = () => {
     }
   };
 
-  const updateIncidentStatus = (id: string, status: 'active' | 'triage' | 'transit' | 'closed') => {
+  const updateIncidentStatus = async (id: string, status: 'active' | 'triage' | 'transit' | 'closed') => {
+    // Optimistic Update
     setIncidents(prev => prev.map(inc => inc.id === id ? { ...inc, status } : inc));
+
+    try {
+      const { error } = await supabase
+        .from('incidents')
+        .update({ status })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      if (status === 'closed' && currentUser) {
+        auditLogger.log(currentUser, 'MISSION_FINALIZED', id, 'Caso encerrado manualmente pelo coordenador.');
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar status do incidente:", err);
+      // Revert optimistic update if needed, but for now we'll just log
+    }
   };
 
   const handleStartTriage = (companyName: string, companyId?: string) => {
@@ -640,7 +646,6 @@ const App: React.FC = () => {
 
       // Log de diagnóstico para depuração (visível na consola do navegador)
       if (ambPhase === 'pending_accept' && ambCompanyId === userCompanyId) {
-        console.log(`[DriverFilter] Incidente ${i.id} detetado para a empresa ${userCompanyId}.`);
       }
 
       // 1. Match direto pelo ID de Auth (MAIOR PRIORIDADE)
@@ -658,7 +663,6 @@ const App: React.FC = () => {
       const isPending = ambPhase === 'pending_accept';
       
       if (isProviderMatch && isPending) {
-        console.log(`[DriverFilter] ALERTA: Incidente ${i.id} BROADCAST aceite para ${currentUser.name}`);
         return true;
       }
 

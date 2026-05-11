@@ -80,14 +80,11 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
    useEffect(() => {
       const fetchDriverDetails = async () => {
          try {
-            console.log("Procurando ficha de motorista para ID:", user.id);
             const current = await dbService.getDriverByAuthId(user.id);
             if (current) {
-               console.log("Ficha de motorista encontrada:", current);
                setDriverDetails(current);
             } else {
                // Fallback: tentar por nome se não encontrar por ID de auth
-               console.warn("Ficha não encontrada por ID, tentando por nome:", adminName);
                const drivers = await dbService.getDrivers();
                const byName = drivers.find(d => d.name === adminName);
                if (byName) setDriverDetails(byName);
@@ -182,7 +179,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
          // Alerta sonoro de emergência
          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'); 
          audio.loop = true;
-         audio.play().catch(e => console.log("Audio auto-play blocked"));
+         audio.play().catch(() => {}); 
 
          setTimeLeft(30); 
          timer = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -406,7 +403,6 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
             // ou confiar que o re-fetch no login resolverá. 
             // Para feedback imediato, já atualizamos o estado local.
             
-            console.log("Avatar atualizado em todos os níveis.");
          } catch (err) {
             console.error("Erro ao atualizar avatar:", err);
             setFeedback({ type: 'error', msg: "Erro ao atualizar avatar." });
@@ -429,7 +425,6 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
             // Sincronizar com o campo status da tabela profiles (se existir) ou apenas persistir no drivers
             await dbService.updateDriverByAuthId(user.id, { status: newStatus });
             
-            console.log(`Estado de serviço alterado para: ${newStatus}`);
          } catch (err) {
             console.error("Erro ao atualizar status:", err);
             setFeedback({ type: 'error', msg: "Erro ao mudar estado de serviço." });

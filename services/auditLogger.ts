@@ -113,10 +113,6 @@ class AuditLogger {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.logs));
     }
     
-    // Log técnico em consola para monitorização em desenvolvimento
-    if (typeof window !== 'undefined') {
-      console.info(`[SSM-AUDIT] ${logWithIntegrity.action} | User: ${logWithIntegrity.userName} | Hash: ${logWithIntegrity.integrityHash}`);
-    }
   }
 
   // Updated to include new mission types

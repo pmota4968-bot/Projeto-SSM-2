@@ -9,7 +9,6 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "skipLibCheck": true,
     "types": [
       "node",
       "vite/client"
@@ -25,6 +24,23 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "include": [
+    "./App.tsx",
+    "./index.tsx",
+    "./components/**/*",
+    "./services/**/*",
+    "./types.ts",
+    "./globals.d.ts",
+    "./constants.tsx"
+  ]
 }

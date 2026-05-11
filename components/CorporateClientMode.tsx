@@ -361,12 +361,12 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm p-8 md:p-12 lg:p-16 flex flex-col xl:flex-row items-center justify-between gap-12 relative overflow-hidden">
               {/* Text Content */}
               <div className="flex-1 space-y-10 relative z-10 text-left order-2 xl:order-1 w-full">
-                <div className="space-y-6">
-                  <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight font-corporate">
-                    Bem-vindo, <span className="text-blue-600">{companyName}</span>
+                <div className="space-y-8">
+                  <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight font-display leading-[1.1]">
+                    Bem-vindo, <br/><span className="text-blue-600">Portal {companyName}</span>
                   </h1>
-                  <p className="text-slate-500 font-medium text-lg leading-relaxed max-w-xl">
-                    Seu ambiente está protegido pelo <span className="font-bold text-slate-900">SSM Digital</span>. Em caso de qualquer intercorrência médica, acione o botão de emergência ao lado para atendimento imediato.
+                  <p className="text-slate-500 font-medium text-xl leading-relaxed max-w-xl opacity-80">
+                    O seu ecossistema corporativo está sob a proteção da <span className="font-bold text-slate-900">Rede Global SSM</span>. Tecnologia de ponta e resposta imediata para garantir a segurança de todos os seus ativos.
                   </p>
                 </div>
 
@@ -391,25 +391,27 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
 
               {/* Emergency Button */}
               <div className="shrink-0 relative flex justify-center order-1 xl:order-2">
-                <div className={`absolute inset-0 rounded-full blur-[70px] opacity-30 transition-all duration-700 bg-red-600 ${panicStep === 'confirming' ? 'scale-125' : 'scale-100'}`}></div>
+                <div className={`absolute inset-0 rounded-full blur-[80px] opacity-20 transition-all duration-1000 bg-red-600 ${panicStep === 'confirming' ? 'scale-150 opacity-40' : 'scale-100'}`}></div>
                 <button
                   onClick={handlePanicClick}
                   disabled={panicStep === 'activating' || panicStep === 'active' || panicStep === 'waiting_dispatch'}
-                  className={`relative w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-2xl active:scale-95 group ${panicStep === 'confirming' ? 'bg-orange-600 scale-105' :
+                  className={`relative w-72 h-72 md:w-96 md:h-96 rounded-full flex flex-col items-center justify-center transition-all duration-700 shadow-[0_30px_100px_rgba(220,38,38,0.2)] active:scale-95 group overflow-hidden ${panicStep === 'confirming' ? 'bg-orange-600 scale-105' :
                     panicStep === 'active' ? 'bg-emerald-600' :
-                      panicStep === 'activating' ? 'bg-slate-900' :
+                      panicStep === 'activating' ? 'bg-slate-950' :
                         panicStep === 'waiting_dispatch' ? 'bg-blue-600' :
                           'bg-red-600 hover:bg-red-700'
                     }`}
                 >
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/15 rounded-full flex items-center justify-center mb-4 md:mb-6">
-                    <AlertCircle className="w-10 h-10 md:w-12 md:h-12 text-white" />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 md:mb-8 backdrop-blur-md border border-white/30 shadow-xl group-hover:scale-110 transition-transform duration-500">
+                    <AlertCircle className="w-12 h-12 md:w-14 md:h-14 text-white" />
                   </div>
-                  <span className="text-2xl md:text-3xl font-black text-white uppercase tracking-[0.1em] font-corporate">
+                  <span className="text-3xl md:text-4xl font-extrabold text-white uppercase tracking-[0.15em] font-display">
                     {panicStep === 'confirming' ? 'CONFIRMAR' : 'EMERGÊNCIA'}
                   </span>
-                  <span className="text-[10px] md:text-[11px] font-bold text-white uppercase tracking-widest mt-2 opacity-80">
-                    CLIQUE PARA ATIVAR
+                  <div className="h-px w-12 bg-white/40 my-4"></div>
+                  <span className="text-[10px] md:text-[11px] font-bold text-white uppercase tracking-[0.3em] opacity-70 group-hover:opacity-100 transition-opacity">
+                    TOQUE PARA ATIVAR
                   </span>
                 </button>
               </div>

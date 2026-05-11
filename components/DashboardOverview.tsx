@@ -222,14 +222,17 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* Chamadas OC Modal removido daqui (agora global no App.tsx) */}
         <div className="lg:col-span-12 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h3 className="text-lg font-black text-slate-900 font-corporate uppercase tracking-tight flex items-center gap-3">
+            <h3 className="text-2xl font-extrabold text-slate-900 font-display uppercase tracking-tight flex items-center gap-4">
               Gestão Operacional Live 
-              <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+              <div className="relative flex h-3 w-3">
+                <div className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></div>
+                <div className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></div>
+              </div>
             </h3>
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <div className="flex items-center bg-slate-200/50 p-1.5 rounded-2xl border border-slate-200 shadow-sm">
               <button 
                 onClick={() => setViewMode('full')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'full' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`px-6 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all duration-300 ${viewMode === 'full' ? 'bg-white text-blue-600 shadow-md ring-1 ring-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 Vista Completa
               </button>
@@ -338,26 +341,27 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 );
               })
             ) : (
-              <div className="bg-white/40 border border-slate-200/50 backdrop-blur-sm rounded-[3rem] p-16 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 border-dashed">
-                <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner border border-blue-100/50 relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <Shield className="w-12 h-12 relative z-10" />
+              <div className="bg-white/60 border border-slate-200/50 backdrop-blur-md rounded-[4rem] p-24 text-center space-y-10 animate-in fade-in slide-in-from-bottom-12 duration-1000 shadow-[0_20px_50px_rgba(0,0,0,0.02)]">
+                <div className="w-32 h-32 bg-slate-950 text-white rounded-[3rem] flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700"></div>
+                  <Shield className="w-14 h-14 relative z-10 group-hover:scale-110 transition-transform duration-500" />
                 </div>
-                <div className="space-y-3">
-                  <h4 className="text-3xl font-black text-slate-900 font-corporate tracking-tight uppercase">
-                    Bem vindo, {companies.find(c => c.id === currentUser?.companyId)?.name || 'Safety & Security Medical'}
+                <div className="space-y-6">
+                  <h4 className="text-4xl font-extrabold text-slate-900 font-display tracking-tight uppercase">
+                    {companies.find(c => c.id === currentUser?.companyId)?.name || 'Safety & Security Medical'}
                   </h4>
-                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-md mx-auto leading-relaxed">
-                    Não existe nenhuma gestão de operação live no momento
+                  <p className="text-slate-400 font-extrabold uppercase tracking-[0.4em] text-[11px] max-w-md mx-auto leading-relaxed opacity-60">
+                    Prontidão Operacional <span className="text-emerald-500">Activa</span>
                   </p>
-                  <p className="text-slate-400/60 font-medium text-xs max-w-xs mx-auto">
-                    O Centro de Inteligência SSM está em prontidão operacional. Assim que uma operação for iniciada, os dados aparecerão aqui em tempo real.
+                  <div className="h-px w-24 bg-slate-200 mx-auto"></div>
+                  <p className="text-slate-500 font-medium text-sm max-w-sm mx-auto leading-relaxed">
+                    O Centro de Inteligência SSM está monitorando a rede global em tempo real. Novos incidentes aparecerão instantaneamente nesta central de comando.
                   </p>
                 </div>
-                <div className="pt-6 flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-3 text-[9px] font-black text-emerald-500 uppercase tracking-[0.3em] bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
-                    Sistema em Prontidão
+                <div className="pt-8 flex flex-col items-center gap-6">
+                  <div className="flex items-center gap-4 text-[10px] font-extrabold text-emerald-600 uppercase tracking-[0.4em] bg-emerald-50 px-8 py-3 rounded-full border border-emerald-100 shadow-sm">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+                    Rede Blindada & Segura
                   </div>
                 </div>
               </div>

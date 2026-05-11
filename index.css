@@ -2,16 +2,25 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #f8fafc;
+  background-color: #fcfdfe; /* Slightly lighter and cleaner background */
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
 }
 
 .font-corporate {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .bg-medical-blue { background-color: #0f172a; }

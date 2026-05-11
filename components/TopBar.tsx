@@ -137,23 +137,23 @@ const TopBar: React.FC<TopBarProps> = ({
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-4 pl-4 border-l border-slate-100 cursor-pointer group"
               >
-                <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-[11px] font-black border-2 border-slate-100 shadow-sm overflow-hidden">
-                  <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
+                <div className="w-11 h-11 rounded-2xl bg-slate-950 flex items-center justify-center text-white text-[11px] font-black border-2 border-white shadow-xl shadow-slate-200/50 overflow-hidden group-hover:border-blue-100 transition-all duration-300">
+                  <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 </div>
                 <div className="flex flex-col items-start min-w-[100px]">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-slate-900 leading-none truncate max-w-[100px] md:max-w-[120px]">{currentUser.name}</span>
-                    <ChevronDown className={`w-3 h-3 text-slate-400 group-hover:text-slate-900 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-extrabold text-slate-900 leading-none truncate max-w-[100px] md:max-w-[150px] font-display">{currentUser.name}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-900 transition-all duration-300 ${showUserMenu ? 'rotate-180 text-blue-600' : ''}`} />
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm">
-                      <Hash className="w-2 h-2" />
-                      <span className="text-[8px] font-black uppercase tracking-tighter whitespace-nowrap">
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="bg-slate-950 text-white px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                      <Hash className="w-2.5 h-2.5" />
+                      <span className="text-[9px] font-bold uppercase tracking-tighter whitespace-nowrap opacity-80">
                         {currentUser.id}
                       </span>
                     </div>
-                    <div className="bg-blue-600 px-1.5 py-0.5 rounded border border-blue-500 shadow-sm shadow-blue-600/20">
-                      <span className="text-[8px] font-black text-white uppercase tracking-widest whitespace-nowrap">
+                    <div className="bg-blue-600 px-2 py-0.5 rounded-md border border-blue-500 shadow-[0_2px_10px_rgba(37,99,235,0.2)]">
+                      <span className="text-[9px] font-extrabold text-white uppercase tracking-widest whitespace-nowrap font-display">
                         {getRoleDisplayName(currentUser.role, currentUser.id)}
                       </span>
                     </div>

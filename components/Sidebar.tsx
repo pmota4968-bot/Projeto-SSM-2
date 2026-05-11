@@ -39,43 +39,50 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
       )}
 
       <aside className={`
-        fixed lg:sticky top-0 left-0 z-[70] h-screen bg-slate-950 text-slate-400 flex flex-col border-r border-slate-800 shrink-0 transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full lg:translate-x-0 w-64'}
+        fixed lg:sticky top-0 left-0 z-[70] h-screen bg-[#080a0f] text-slate-400 flex flex-col border-r border-slate-800/50 shrink-0 transition-all duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0 w-80' : '-translate-x-full lg:translate-x-0 w-72'}
       `}>
-        <div className="p-8 pb-4 relative">
+        <div className="p-10 pb-8 relative">
           {/* Close button for mobile */}
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white lg:hidden"
+            className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white lg:hidden transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
 
-          <div className="flex items-center gap-4 mb-6">
-            <SSMLogo className="w-12 h-12 shrink-0" />
-            <span className="text-4xl font-black text-white tracking-tighter">SSM</span>
+          <div className="flex items-center gap-3 mb-10 group cursor-default px-1">
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500 blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+              <SSMLogo className="w-8 h-8 shrink-0 relative z-10 transition-transform duration-500 group-hover:scale-105" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-black text-white tracking-[0.25em] font-display leading-none">SSM</span>
+              <span className="text-[7px] font-bold text-blue-500 tracking-[0.4em] uppercase mt-1.5 opacity-80 font-display">Command Center</span>
+            </div>
           </div>
 
-          <div className="flex gap-4">
-            <div className="w-1 bg-blue-600 self-stretch rounded-full opacity-60" />
+          <div className="flex gap-4 items-center px-1 py-4 border-y border-white/5 bg-white/[0.02] rounded-2xl">
+            <div className="w-0.5 h-8 bg-gradient-to-b from-blue-500 to-transparent self-stretch rounded-full" />
             <div className="flex flex-col justify-center">
-              <span className="text-[11px] font-black text-slate-400 tracking-[0.2em] leading-tight">
-                SAFETY & SECURITY
+              <span className="text-[8px] font-medium text-slate-500 tracking-[0.3em] leading-tight uppercase font-display">
+                Safety & Security
               </span>
-              <span className="text-lg font-black text-blue-400 tracking-wider leading-none mt-1">
+              <span className="text-sm font-extrabold text-white tracking-widest leading-none mt-1 font-display">
                 MEDICAL
               </span>
             </div>
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-6 space-y-1.5 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === item.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'hover:bg-slate-900 hover:text-white'}`}
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 group ${activeTab === item.id ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/30' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
             >
-              <item.icon className="w-5 h-5" /> {item.label}
+              <item.icon className={`w-5 h-5 transition-transform duration-300 ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'}`} /> 
+              <span className="font-display uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
         </nav>

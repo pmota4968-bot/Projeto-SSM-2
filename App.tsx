@@ -145,8 +145,30 @@ const App: React.FC = () => {
       setIncomingCallIncident(sosIncident);
     }
 
+    // NOVO: Detetar despachos para o Gestor de Frota (Notificação de Acompanhamento)
+    if (currentUser?.role === 'GESTOR_FROTA_AMB' && currentUser.companyId) {
+      const dispatchedToMe = incidents.find(inc => {
+        const prevInc = prevIncidentsRef.current.find(p => p.id === inc.id);
+        const isMyFleet = inc.ambulanceState?.companyId === currentUser.companyId;
+        const isNewDispatch = isMyFleet && 
+                            inc.ambulanceState?.phase === 'pending_accept' &&
+                            (!prevInc || prevInc.ambulanceState?.phase !== 'pending_accept');
+        
+        if (!isNewDispatch) return false;
+
+        // Recency check (evitar disparos em loop ou dados antigos)
+        const updatedAt = inc.updated_at ? new Date(inc.updated_at).getTime() : Date.now();
+        return (Date.now() - updatedAt) < 60000;
+      });
+
+      if (dispatchedToMe && !incomingCallIncident) {
+        // Usamos o mesmo sistema de alerta visual para o Gestor, mas ele terá vista de acompanhamento
+        setIncomingCallIncident(dispatchedToMe);
+      }
+    }
+
     prevIncidentsRef.current = incidents;
-  }, [incidents]);
+  }, [incidents, currentUser, incomingCallIncident]);
 
   // Fetch Initial Data
   const fetchData = useCallback(async () => {
@@ -924,13 +946,21 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-4 mb-10">
-                <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tight">Chamada de Emergência</h3>
-                <div className="inline-flex items-center gap-2 bg-red-50 text-red-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-red-100">
+                <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tight">
+                  {currentUser.role === 'GESTOR_FROTA_AMB' ? 'Alerta de Despacho' : 'Chamada de Emergência'}
+                </h3>
+                <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  currentUser.role === 'GESTOR_FROTA_AMB' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-700 border-red-100'
+                }`}>
                   <Siren className="w-3.5 h-3.5 animate-pulse" />
-                  Linha Prioritária SSM
+                  {currentUser.role === 'GESTOR_FROTA_AMB' ? 'Acompanhamento de Frota' : 'Linha Prioritária SSM'}
                 </div>
                 <p className="text-base font-bold text-slate-500 mt-4 leading-relaxed text-center">
-                  <span className="text-slate-900 font-black">{companies.find(c => c.id === incomingCallIncident.companyId)?.name || 'Cliente Corporativo'}</span> está a solicitar apoio imediato.
+                  {currentUser.role === 'GESTOR_FROTA_AMB' ? (
+                    <>Uma viatura da <span className="text-slate-900 font-black">sua frota</span> foi mobilizada para uma ocorrência.</>
+                  ) : (
+                    <><span className="text-slate-900 font-black">{companies.find(c => c.id === incomingCallIncident.companyId)?.name || 'Cliente Corporativo'}</span> está a solicitar apoio imediato.</>
+                  )}
                 </p>
               </div>
 
@@ -945,21 +975,30 @@ const App: React.FC = () => {
                       setActiveCommIncident(inc);
                       setActiveCommIncidentId(inc.id);
                       
-                      // INÍCIO AUTOMÁTICO DE TRIAGEM
-                      const company = companies.find(c => c.id === inc.companyId);
-                      handleStartTriage(company?.name || 'Cliente Externo', inc.companyId);
+                      if (currentUser.role === 'GESTOR_FROTA_AMB') {
+                        setActiveTab('my_fleet');
+                      } else {
+                        const company = companies.find(c => c.id === inc.companyId);
+                        handleStartTriage(company?.name || 'Cliente Externo', inc.companyId);
+                      }
                     }
                     setIncomingCallIncident(null);
                   }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-blue-600/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  className={`w-full text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 ${
+                    currentUser.role === 'GESTOR_FROTA_AMB' ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                  }`}
                 >
-                  <CheckCircle className="w-5 h-5" /> Atender Chamada
+                  {currentUser.role === 'GESTOR_FROTA_AMB' ? (
+                    <><Activity className="w-5 h-5" /> Acompanhar Missão</>
+                  ) : (
+                    <><CheckCircle className="w-5 h-5" /> Atender Chamada</>
+                  )}
                 </button>
                 <button
                   onClick={() => setIncomingCallIncident(null)}
                   className="w-full bg-white border border-slate-200 text-slate-400 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                 >
-                  <X className="w-4 h-4" /> Recusar
+                  <X className="w-4 h-4" /> {currentUser.role === 'GESTOR_FROTA_AMB' ? 'Ignorar' : 'Recusar'}
                 </button>
               </div>
             </div>

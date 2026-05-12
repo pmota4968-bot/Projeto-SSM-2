@@ -10,6 +10,7 @@ type TriageMode = 'AI_ANALYSIS' | 'STRUCTURED_FLOW';
 interface TriageData {
   company: string;
   patientName: string;
+  patientCount: number;
   age: string;
   location: string;
   contact: string;
@@ -37,6 +38,7 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
   const [triageData, setTriageData] = useState<TriageData>(() => ({
     company: initialData?.companyName || (userCompany ? userCompany.name : ''),
     patientName: '',
+    patientCount: 1,
     age: '',
     location: '',
     contact: ''
@@ -176,6 +178,7 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
     setTriageData({
       company: initialData?.companyName || userCompany?.name || 'SSM Global Dispatch',
       patientName: '',
+      patientCount: 1,
       age: '',
       location: '',
       contact: ''
@@ -194,6 +197,7 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
       priority: suggestion.classification,
       coords: [-25.9692 + (Math.random() - 0.5) * 0.01, 32.5732 + (Math.random() - 0.5) * 0.01],
       patientName: triageData.patientName, 
+      patientCount: triageData.patientCount,
       companyId: initialData?.companyId || companies.find(c => c.name === triageData.company)?.id || currentUser.companyId || 'SSM',
       employeeId: 'EXTERNAL' 
     };
@@ -400,6 +404,24 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
                           />
                         </div>
                         <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pessoas a Evacuar</label>
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => setTriageData({ ...triageData, patientCount: Math.max(1, triageData.patientCount - 1) })}
+                              className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-xl font-black hover:bg-slate-200"
+                            > - </button>
+                            <div className="flex-1 bg-white border border-slate-200 rounded-2xl px-6 py-3.5 text-center text-sm font-black">
+                              {triageData.patientCount}
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => setTriageData({ ...triageData, patientCount: triageData.patientCount + 1 })}
+                              className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl font-black hover:bg-slate-800"
+                            > + </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade</label>
                           <input
                             type="text"
@@ -480,8 +502,8 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({ currentUser, onAd
                       <p className="text-sm font-black text-blue-600">{triageData.company}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Paciente</p>
-                      <p className="text-sm font-black text-slate-900">{triageData.patientName || 'Não Informado'}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Paciente / Qtd</p>
+                      <p className="text-sm font-black text-slate-900">{triageData.patientName || 'Não Informado'} ({triageData.patientCount} pax)</p>
                     </div>
                     <div className="col-span-2">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Localização</p>

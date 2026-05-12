@@ -158,6 +158,7 @@ export interface EmergencyCase {
   type: string;
   coords: [number, number];
   patientName?: string;
+  patientCount?: number;
   employeeId?: string;
   companyId?: string;
   ambulanceId?: string;

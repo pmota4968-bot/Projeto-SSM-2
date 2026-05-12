@@ -171,7 +171,23 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
   return (
     <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-12 shadow-sm overflow-hidden relative">
       <div className="relative z-10 flex flex-col gap-8">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight font-corporate uppercase">Protocolo de <span className="text-blue-600">Triagem SSM</span></h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight font-corporate uppercase">Protocolo de <span className="text-blue-600">Triagem SSM</span></h2>
+          <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+            <button
+              onClick={() => { setMode('STRUCTURED_FLOW'); handleReset(); }}
+              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${mode === 'STRUCTURED_FLOW' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Stethoscope className="w-4 h-4" /> Questionário
+            </button>
+            <button
+              onClick={() => { setMode('AI_ANALYSIS'); handleReset(); }}
+              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${mode === 'AI_ANALYSIS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Sparkles className="w-4 h-4" /> Análise IA
+            </button>
+          </div>
+        </div>
         
         {mode === 'AI_ANALYSIS' ? (
            <div className="space-y-4">
@@ -181,6 +197,164 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
         ) : (
           <div className="max-w-5xl mx-auto w-full">
             {currentStep < 5 ? (
+              <div className="bg-slate-50 rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-inner flex flex-col md:flex-row min-h-[500px]">
+                <div className="w-full md:w-72 bg-white border-r border-slate-100 p-8 shrink-0">
+                  <div className="space-y-6">
+                    {steps.map((step, idx) => (
+                      <div key={idx} className={`flex items-center gap-4 transition-all ${currentStep === idx ? 'opacity-100 scale-105' : 'opacity-40 grayscale'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shadow-sm ${currentStep === idx ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                          {idx}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Passo</p>
+                          <p className={`text-[10px] font-black uppercase tracking-tighter truncate ${currentStep === idx ? 'text-blue-600' : 'text-slate-700'}`}>
+                            {step.title.split(' (')[0]}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex-1 p-10 flex flex-col animate-in slide-in-from-right-4">
+                  <div className="mb-10">
+                    <h3 className="text-2xl font-black text-slate-900 font-corporate uppercase tracking-tight">{steps[currentStep].title}</h3>
+                    <p className="text-sm font-medium text-slate-500 mt-2">{steps[currentStep].description}</p>
+                  </div>
+
+                  <div className="flex-1 space-y-6">
+                    {currentStep === 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-top-4 duration-500">
+                        <div className="space-y-6 md:col-span-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
+                            Identificação dos Pacientes
+                            <span className="text-blue-600">Qtd: {triageData.patientCount}</span>
+                          </label>
+                          <div className="space-y-4">
+                            {Array.from({ length: triageData.patientCount }).map((_, idx) => (
+                              <div key={idx} className="relative group">
+                                <div className="flex gap-3">
+                                  <div className="flex-1 relative">
+                                    <input
+                                      required
+                                      className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-black focus:border-blue-600 outline-none pr-12"
+                                      placeholder={`Nome do Paciente ${idx + 1}`}
+                                      value={triageData.patients[idx]?.name || ''}
+                                      onChange={e => {
+                                        const newP = [...triageData.patients];
+                                        newP[idx] = { ...newP[idx], name: e.target.value };
+                                        setTriageData({ ...triageData, patients: newP });
+                                      }}
+                                    />
+                                    <button 
+                                      type="button"
+                                      onClick={() => setShowEmployeeSearch(showEmployeeSearch === idx ? null : idx)}
+                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
+                                    >
+                                      <Users2 className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                  <input
+                                    className="w-24 bg-white border border-slate-200 rounded-2xl px-4 py-4 text-sm font-bold text-black text-center focus:border-blue-600 outline-none"
+                                    placeholder="Idade"
+                                    value={triageData.patients[idx]?.age || ''}
+                                    onChange={e => {
+                                      const newP = [...triageData.patients];
+                                      newP[idx] = { ...newP[idx], age: e.target.value };
+                                      setTriageData({ ...triageData, patients: newP });
+                                    }}
+                                  />
+                                </div>
+
+                                {showEmployeeSearch === idx && (
+                                  <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 max-h-60 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 px-2">Colaboradores da Empresa</p>
+                                    <div className="space-y-1">
+                                      {employees.filter(emp => !triageData.company || emp.companyName === triageData.company).map(emp => (
+                                        <button
+                                          key={emp.id}
+                                          type="button"
+                                          onClick={() => {
+                                            const newP = [...triageData.patients];
+                                            newP[idx] = { ...newP[idx], name: emp.name, id: emp.id, age: '30' }; 
+                                            setTriageData({ ...triageData, patients: newP });
+                                            setShowEmployeeSearch(null);
+                                          }}
+                                          className="w-full text-left p-3 hover:bg-blue-50 rounded-xl transition-all flex items-center justify-between group"
+                                        >
+                                          <div>
+                                            <p className="text-sm font-bold text-slate-700">{emp.name}</p>
+                                            <p className="text-[10px] text-slate-400 uppercase">{emp.position}</p>
+                                          </div>
+                                          <Plus className="w-4 h-4 text-slate-200 group-hover:text-blue-600" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total de Pacientes</label>
+                          <div className="flex items-center gap-3">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const count = Math.max(1, triageData.patientCount - 1);
+                                setTriageData({ 
+                                  ...triageData, 
+                                  patientCount: count,
+                                  patients: triageData.patients.slice(0, count)
+                                });
+                              }}
+                              className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-xl font-black hover:bg-slate-200"
+                            > - </button>
+                            <div className="flex-1 bg-white border border-slate-200 rounded-2xl px-6 py-3.5 text-center text-sm font-black text-blue-600">
+                              {triageData.patientCount}
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const count = triageData.patientCount + 1;
+                                setTriageData({ 
+                                  ...triageData, 
+                                  patientCount: count,
+                                  patients: [...triageData.patients, { name: '', age: '' }]
+                                });
+                              }}
+                              className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-xl font-black hover:bg-slate-800"
+                            > + </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contacto de Reporte</label>
+                          <input
+                            type="text"
+                            className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-black focus:border-blue-600 outline-none"
+                            placeholder="Telemóvel ou Rádio"
+                            value={triageData.contact}
+                            onChange={e => setTriageData({ ...triageData, contact: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-1.5 md:col-span-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Local Exacto do Evento</label>
+                          <input
+                            type="text"
+                            className="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-black focus:border-blue-600 outline-none"
+                            placeholder="Andar, Sala, Referência..."
+                            value={triageData.location}
+                            onChange={e => setTriageData({ ...triageData, location: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="mb-6 flex items-center justify-between bg-blue-50 p-6 rounded-[2rem] border border-blue-100">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center font-black">
                               {activePatientIdx + 1}
                             </div>
                             <div>
@@ -234,10 +408,9 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
                 </div>
               </div>
             ) : (
-              /* RESULT VIEW FOR STRUCTURED FLOW */
               <div className="max-w-3xl mx-auto bg-slate-50 border border-slate-200 rounded-[3rem] p-12 shadow-xl animate-in zoom-in-95">
                 <div className="text-center mb-10">
-                  <div className={`w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center shadow-2xl mb-6 ${PRIORITY_COLORS[suggestion!.classification]}`}>
+                  <div className={`w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center shadow-2xl mb-6 ${PRIORITY_COLORS[suggestion!.classification as any]}`}>
                     <span className="text-5xl font-black font-corporate">{suggestion!.classification}</span>
                   </div>
                   <h3 className="text-3xl font-black text-slate-900 font-corporate uppercase tracking-tight">{suggestion!.actionRequired}</h3>
@@ -266,10 +439,6 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
                         ))}
                       </div>
                     </div>
-                    <div className="col-span-2 pt-4 border-t border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Localização de Evacuação</p>
-                      <p className="text-sm font-black text-slate-900">{triageData.location || 'Não Informada'}</p>
-                    </div>
                   </div>
 
                   <div>
@@ -282,13 +451,6 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
                         </div>
                       ))}
                     </div>
-                  </div>
-
-                  <div className="p-5 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 shrink-0" />
-                    <p className="text-[10px] font-bold text-blue-800 uppercase tracking-widest leading-relaxed">
-                      "Nunca baixar prioridade após subida". Manter observação contínua até chegada do meio.
-                    </p>
                   </div>
                 </div>
 

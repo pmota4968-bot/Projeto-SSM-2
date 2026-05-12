@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Sparkles, Loader2, FileText, CheckCircle2, Shield, Printer, ArrowRight, ArrowLeft, AlertCircle, Info, ClipboardList, Stethoscope, Building2, Send, ShieldCheck } from 'lucide-react';
+import { Sparkles, Loader2, FileText, CheckCircle2, Shield, Printer, ArrowRight, ArrowLeft, AlertCircle, Info, ClipboardList, Stethoscope, Building2, Send, ShieldCheck, Users2, Plus, Siren } from 'lucide-react';
 import { getProtocolAdvice } from '../services/geminiService';
-import { ProtocolSuggestion, EmergencyPriority, EmergencyCase, AdminUser, Company } from '../types';
+import { ProtocolSuggestion, EmergencyPriority, EmergencyCase, AdminUser, Company, Employee } from '../types';
 import { PRIORITY_COLORS, COMPANIES } from '../constants';
 
 type TriageMode = 'AI_ANALYSIS' | 'STRUCTURED_FLOW';
@@ -127,8 +127,30 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
       } else if (currentStep < 4) {
         setCurrentStep(currentStep + 1);
       } else {
-        // Fallback for all no
-        handleNextFlow(); 
+        // Se chegou ao fim sem nenhum "Sim", classifica como AZUL (Não Urgente)
+        const finalPriority = EmergencyPriority.LOW;
+        const updatedPatients = [...triageData.patients];
+        updatedPatients[activePatientIdx] = {
+          ...updatedPatients[activePatientIdx],
+          classification: finalPriority,
+          results: { ...results }
+        };
+
+        if (activePatientIdx < triageData.patientCount - 1) {
+          setTriageData({ ...triageData, patients: updatedPatients });
+          setActivePatientIdx(activePatientIdx + 1);
+          setResults({});
+          setCurrentStep(1);
+        } else {
+          setTriageData({ ...triageData, patients: updatedPatients });
+          setSuggestion({
+            classification: finalPriority,
+            actionRequired: 'TRIAGEM CONCLUÍDA (NÃO URGENTE)',
+            reasoning: 'Nenhum discriminador de urgência detetado.',
+            suggestedResources: ['Acompanhamento Telefónico']
+          });
+          setCurrentStep(5);
+        }
       }
     }
   };

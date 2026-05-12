@@ -884,6 +884,7 @@ const App: React.FC = () => {
                 initialData={triageInitialData}
                 onNavigate={setActiveTab}
                 companies={companies}
+                employees={employees}
               />
             )}
             {activeTab === 'providers' && <AnalyticsDashboard currentUser={currentUser} companies={filteredCompanies} />}

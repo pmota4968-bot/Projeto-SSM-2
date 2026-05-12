@@ -96,7 +96,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     setIsCallActive(!!webrtcState.activeCall);
     // Auto-atender chamada se houver uma chamada recebida ao abrir ou durante
     if (webrtcState.incomingCall && webrtcService.current) {
-      webrtcService.current.answerCall();
+      webrtcService.current.answerCall(webrtcState.incomingCall);
     }
   }, [webrtcState.activeCall, webrtcState.incomingCall]);
 

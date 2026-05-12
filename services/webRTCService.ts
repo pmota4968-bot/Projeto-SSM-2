@@ -65,12 +65,35 @@ export class WebRTCService {
     }
 
     answerCall(call: any, video: boolean = false) {
-        navigator.mediaDevices.getUserMedia({ video, audio: true }).then(stream => {
-            this.onStateChange({ localStream: stream, isVideoActive: video, isVolumeActive: true, incomingCall: null });
-            call.answer(stream);
-            this.setupCallListeners(call);
-            this.currentCall = call;
-            this.onStateChange({ activeCall: call });
+        if (!call) {
+            console.error('WebRTC: Tentativa de atender chamada sem objeto de chamada válido.');
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ 
+            video: video, 
+            audio: true 
+        }).then(stream => {
+            this.onStateChange({ 
+                localStream: stream, 
+                isVideoActive: video, 
+                isVolumeActive: true, 
+                incomingCall: null 
+            });
+            
+            try {
+                call.answer(stream);
+                this.setupCallListeners(call);
+                this.currentCall = call;
+                this.onStateChange({ activeCall: call });
+            } catch (err) {
+                console.error('WebRTC: Erro ao executar call.answer:', err);
+                this.endCall();
+            }
+        }).catch(err => {
+            console.error('WebRTC: Erro ao aceder média para atender chamada:', err);
+            this.onStateChange({ incomingCall: null });
+            // Notificamos falha silenciosamente nos logs, mas evitamos crash
         });
     }
 

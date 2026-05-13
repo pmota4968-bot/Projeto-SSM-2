@@ -17,6 +17,7 @@ interface PatientIdentity {
 
 interface TriageData {
   company: string;
+  companyId?: string;
   patientCount: number;
   patients: PatientIdentity[];
   location: string;
@@ -51,6 +52,7 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
 
   const [triageData, setTriageData] = useState<TriageData>(() => ({
     company: initialData?.companyName || (userCompany ? userCompany.name : ''),
+    companyId: initialData?.companyId || (userCompany ? userCompany.id : ''),
     patientCount: 1,
     patients: [{ name: '', age: '' }],
     location: '',
@@ -248,10 +250,33 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
                     {currentStep === 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-top-4 duration-500">
                         <div className="space-y-6 md:col-span-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
-                            Identificação dos Pacientes
-                            <span className="text-blue-600">Qtd: {triageData.patientCount}</span>
-                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Empresa Solicitante</label>
+                              <div className="relative">
+                                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600" />
+                                <select 
+                                  disabled={!!initialData?.companyName}
+                                  className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-6 py-4 text-sm font-bold text-black focus:border-blue-600 outline-none appearance-none disabled:bg-slate-50"
+                                  value={triageData.companyId}
+                                  onChange={e => {
+                                    const comp = companies.find(c => c.id === e.target.value);
+                                    setTriageData({ ...triageData, companyId: e.target.value, company: comp?.name || '' });
+                                  }}
+                                >
+                                  <option value="">Selecionar Empresa...</option>
+                                  {companies.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                            
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between md:col-span-2">
+                              Identificação dos Pacientes
+                              <span className="text-blue-600">Qtd: {triageData.patientCount}</span>
+                            </label>
+                          </div>
                           <div className="space-y-4">
                             {Array.from({ length: triageData.patientCount }).map((_, idx) => (
                               <div key={idx} className="relative group">
@@ -289,10 +314,15 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
                                 </div>
 
                                 {showEmployeeSearch === idx && (
-                                  <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 max-h-60 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 px-2">Colaboradores da Empresa</p>
-                                    <div className="space-y-1">
-                                      {employees.filter(emp => !triageData.company || emp.companyName === triageData.company).map(emp => (
+                                  <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <div className="bg-blue-600 p-4">
+                                      <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1 opacity-80">Acesso Restrito</p>
+                                      <h4 className="text-sm font-black text-white uppercase tracking-tight">BASE DE DADOS MÉDICA</h4>
+                                      <p className="text-[9px] font-bold text-blue-100 uppercase mt-1">Empresa: {triageData.company || 'Não Selecionada'}</p>
+                                    </div>
+                                    <div className="p-4 max-h-64 overflow-y-auto custom-scrollbar bg-white">
+                                      <div className="space-y-1">
+                                        {employees.filter(emp => !triageData.companyId || emp.companyId === triageData.companyId).map(emp => (
                                         <button
                                           key={emp.id}
                                           type="button"

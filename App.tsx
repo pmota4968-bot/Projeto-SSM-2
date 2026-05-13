@@ -99,6 +99,14 @@ const App: React.FC = () => {
     }
   }, [webrtcState.incomingCall, activeCommIncidentId, incidents, incomingCallIncident]);
 
+  // Sync activeCommIncident when ID changes
+  useEffect(() => {
+    if (activeCommIncidentId) {
+      const inc = incidents.find(i => i.id === activeCommIncidentId);
+      if (inc) setActiveCommIncident(inc);
+    }
+  }, [activeCommIncidentId, incidents]);
+
   useEffect(() => {
     const fetchDriverData = async () => {
       if (currentUser?.role === 'MOTORISTA_AMB') {
@@ -640,197 +648,170 @@ const App: React.FC = () => {
       localStorage.removeItem('supabase.auth.token');
     }
 
-    // Tentamos terminar sessão no Supabase de forma assíncrona, não bloqueando a UI localmente.
     supabase.auth.signOut().catch(err => {
       console.error("Erro ao terminar sessão no Supabase:", err);
     });
   };
 
-  if (!currentUser) return <Login onLoginSuccess={handleLogin} />;
+  // RENDER LOGIC
+  const renderContent = () => {
+    if (!currentUser) return <Login onLoginSuccess={handleLogin} />;
 
-  // MODO MOTORISTA
-  if (currentUser.role === 'MOTORISTA_AMB') {
-    const currentDriver = drivers.find(d => d.authUserId === currentUser.id);
-    
-    // Procura o incidente onde esta ambulância ou este motorista foi despachado
-    const myIncident = incidents.find(i => {
-      const ambState = i.ambulanceState as any;
-      if (!ambState || i.status === 'closed') return false;
+    // MODO MOTORISTA
+    if (currentUser.role === 'MOTORISTA_AMB') {
+      const currentDriver = drivers.find(d => d.authUserId === currentUser.id);
+      const myIncident = incidents.find(i => {
+        const ambState = i.ambulanceState as any;
+        if (!ambState || i.status === 'closed') return false;
+        const userCompanyId = (currentUser.companyId || '').toLowerCase().trim();
+        const driverAuthId = (currentUser.id || '').toLowerCase().trim();
+        const driverName = (currentUser.name || '').toLowerCase().trim();
+        const ambCompanyId = (ambState.companyId || '').toLowerCase().trim();
+        const ambDriverId = (ambState.driverId || '').toLowerCase().trim();
+        const ambDriverName = (ambState.driverName || '').toLowerCase().trim();
+        const ambPhase = ambState.phase;
+        if (ambDriverId && ambDriverId === driverAuthId) return true;
+        if (ambState.imei && currentDriver?.imei && ambState.imei === currentDriver.imei) return true;
+        if (ambDriverName && ambDriverName === driverName) return true;
+        const isProviderMatch = ambCompanyId === userCompanyId;
+        const isPending = ambPhase === 'pending_accept';
+        return isProviderMatch && isPending;
+      });
+      const myAmbulance = ambulances.find(amb => amb.companyId === currentUser.companyId);
 
-      const userCompanyId = (currentUser.companyId || '').toLowerCase().trim();
-      const driverAuthId = (currentUser.id || '').toLowerCase().trim();
-      const driverName = (currentUser.name || '').toLowerCase().trim();
-
-      const ambCompanyId = (ambState.companyId || '').toLowerCase().trim();
-      const ambDriverId = (ambState.driverId || '').toLowerCase().trim();
-      const ambDriverName = (ambState.driverName || '').toLowerCase().trim();
-      const ambPhase = ambState.phase;
-
-      // Log de diagnóstico para depuração (visível na consola do navegador)
-      if (ambPhase === 'pending_accept' && ambCompanyId === userCompanyId) {
-      }
-
-      // 1. Match direto pelo ID de Auth (MAIOR PRIORIDADE)
-      if (ambDriverId && ambDriverId === driverAuthId) return true;
-
-      // 2. Match por IMEI (DEVICE SYNC)
-      if (ambState.imei && currentDriver?.imei && ambState.imei === currentDriver.imei) return true;
-
-      // 3. Match por NOME (FALLBACK para identidades desvinculadas na base)
-      if (ambDriverName && ambDriverName === driverName) return true;
-
-      // 4. BROADCAST para a empresa (Garantir que todos os motoristas ativos vejam o despacho inicial)
-      // Se estiver em 'pending_accept', permitimos que qualquer motorista da mesma empresa veja o pedido
-      const isProviderMatch = ambCompanyId === userCompanyId;
-      const isPending = ambPhase === 'pending_accept';
-      
-      if (isProviderMatch && isPending) {
-        return true;
-      }
-
-      return false;
-    });
-
-    // Se não houver incidente, tentamos encontrar a ambulância padrão da empresa para inicializar o PeerJS
-    const myAmbulance = ambulances.find(amb => amb.companyId === currentUser.companyId);
-
-    return (
-      <AmbulanceMode
-        user={currentUser}
-        onLogout={handleLogout}
-        incident={myIncident || null}
-        onUpdateAmbulance={updateAmbulanceState}
-        onUpdateStatus={updateIncidentStatus}
-        imei={currentDriver?.imei || myAmbulance?.imei}
-        companies={companies}
-      />
-    );
-  }
-
-  // MODO CORPORATIVO
-  const isCorporate = ['COLABORADOR_RH', 'ADMIN_CLIENTE', 'RESPONSAVEL_EMERG_CLIENTE'].includes(currentUser.role);
-
-  if (isCorporate) {
-    return (
-      <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans relative overflow-x-hidden">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            setIsSidebarOpen(false); // Close sidebar on mobile after selection
-          }}
-          userRole={currentUser.role}
+      return (
+        <AmbulanceMode
+          user={currentUser}
           onLogout={handleLogout}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
+          incident={myIncident || null}
+          onUpdateAmbulance={updateAmbulanceState}
+          onUpdateStatus={updateIncidentStatus}
+          imei={currentDriver?.imei || myAmbulance?.imei}
+          companies={companies}
         />
-        <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
-          <TopBar
+      );
+    }
+
+    // MODO CORPORATIVO
+    const isCorporate = ['COLABORADOR_RH', 'ADMIN_CLIENTE', 'RESPONSAVEL_EMERG_CLIENTE'].includes(currentUser.role);
+    if (isCorporate) {
+      return (
+        <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans relative overflow-x-hidden">
+          <Sidebar
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            currentUser={currentUser}
+            setActiveTab={(tab) => {
+              setActiveTab(tab);
+              setIsSidebarOpen(false);
+            }}
+            userRole={currentUser.role}
             onLogout={handleLogout}
-            toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
           />
-          <div className="flex-1 overflow-hidden h-full">
-            {activeTab === 'providers' && (
-              <ProviderFleetDashboard
-                currentUser={currentUser}
-                ambulances={filteredAmbulances}
-                drivers={drivers}
-                incidents={incidents}
-                companies={companies}
-                onUpdateDrivers={setDrivers}
-                onLogout={handleLogout}
-                onOpenComm={(id) => {
-                  setActiveCommIncidentId(id);
-                  setCommIsMinimized(false);
-                }}
-              />
-            )}
-            {activeTab === 'corporate_sos' && (
-              <CorporateClientMode
-                adminName={currentUser.name}
-                onLogout={handleLogout}
-                incidents={incidents}
-                onOpenChat={(id) => {
-                  setActiveCommIncidentId(id);
-                  setCommIsMinimized(false);
-                }}
-                onTriggerEmergency={async () => {
-                  const incidentId = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
-                  const newInc: EmergencyCase = {
-                    id: incidentId,
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    type: 'Pânico Corporativo Ativado',
-                    locationName: 'Sede da Empresa (GPS)',
-                    status: 'active',
-                    priority: EmergencyPriority.CRITICAL,
-                    coords: [-25.9680, 32.5710],
-                    companyId: currentUser.companyId
-                  };
-                  
-                  // Optimistic UI update so the client sees it immediately
-                  setIncidents(prev => [newInc, ...prev]);
-                  setActiveIncidentIdForClient(incidentId);
-
-                  try {
-                    await dbService.saveIncident(newInc);
-                  } catch (err) {
-                    console.error("Erro CRÍTICO ao gravar SOS na base de dados (RLS ou formato de id inválido):", err);
-                    alert("Atenção: A chamada SOS local ativou, mas não foi possível enviar aos servidores de coordenação. Por favor, ligue para a linha telefónica de emergência.");
-                  }
-                }}
-                companyId={currentUser.companyId}
-                currentUser={currentUser}
-                employees={filteredEmployees}
-                companies={companies}
-              />
-            )}
-            {activeTab === 'employee_registration' && (
-              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
-                <EmployeeRegistration companyId={currentUser.companyId} onAddEmployee={handleAddEmployee} />
-              </div>
-            )}
-            {activeTab === 'patients' && (
-              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
-                <PatientManagement employees={filteredEmployees} currentUser={currentUser} />
-              </div>
-            )}
-            {activeTab === 'profile' && (
-              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
-                <UserProfileSettings
-                  user={currentUser}
-                  initialTab="perfil"
-                  onClose={() => setActiveTab('corporate_sos')}
-                  onUpdateUser={handleUpdateUser}
+          <main className="flex-1 flex flex-col h-screen overflow-hidden w-full">
+            <TopBar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              currentUser={currentUser}
+              onLogout={handleLogout}
+              toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+            <div className="flex-1 overflow-hidden h-full">
+              {activeTab === 'providers' && (
+                <ProviderFleetDashboard
+                  currentUser={currentUser}
+                  ambulances={filteredAmbulances}
+                  drivers={drivers}
+                  incidents={incidents}
+                  companies={companies}
+                  onUpdateDrivers={setDrivers}
+                  onLogout={handleLogout}
+                  onOpenComm={(id) => {
+                    setActiveCommIncidentId(id);
+                    setCommIsMinimized(false);
+                  }}
                 />
-              </div>
-            )}
-            {activeTab === 'settings' && (
-              <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
-                <UserProfileSettings
-                  user={currentUser}
-                  initialTab="definicoes"
-                  onClose={() => setActiveTab('corporate_sos')}
-                  onUpdateUser={handleUpdateUser}
+              )}
+              {activeTab === 'corporate_sos' && (
+                <CorporateClientMode
+                  adminName={currentUser.name}
+                  onLogout={handleLogout}
+                  incidents={incidents}
+                  onOpenChat={(id) => {
+                    setActiveCommIncidentId(id);
+                    setCommIsMinimized(false);
+                  }}
+                  onTriggerEmergency={async () => {
+                    const incidentId = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
+                    const newInc: EmergencyCase = {
+                      id: incidentId,
+                      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      type: 'Pânico Corporativo Ativado',
+                      locationName: 'Sede da Empresa (GPS)',
+                      status: 'active',
+                      priority: EmergencyPriority.CRITICAL,
+                      coords: [-25.9680, 32.5710],
+                      companyId: currentUser.companyId
+                    };
+                    setIncidents(prev => [newInc, ...prev]);
+                    setActiveIncidentIdForClient(incidentId);
+                    try {
+                      await dbService.saveIncident(newInc);
+                    } catch (err) {
+                      console.error("Erro CRÍTICO ao gravar SOS na base de dados:", err);
+                      alert("Atenção: A chamada SOS local ativou, mas não foi possível enviar aos servidores de coordenação.");
+                    }
+                  }}
+                  companyId={currentUser.companyId}
+                  currentUser={currentUser}
+                  employees={filteredEmployees}
+                  companies={companies}
                 />
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
-    );
-  }
+              )}
+              {activeTab === 'employee_registration' && (
+                <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
+                  <EmployeeRegistration companyId={currentUser.companyId} onAddEmployee={handleAddEmployee} />
+                </div>
+              )}
+              {activeTab === 'patients' && (
+                <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
+                  <PatientManagement employees={filteredEmployees} currentUser={currentUser} />
+                </div>
+              )}
+              {activeTab === 'profile' && (
+                <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
+                  <UserProfileSettings
+                    user={currentUser}
+                    initialTab="perfil"
+                    onClose={() => setActiveTab('corporate_sos')}
+                    onUpdateUser={handleUpdateUser}
+                  />
+                </div>
+              )}
+              {activeTab === 'settings' && (
+                <div className="p-4 md:p-8 custom-scrollbar overflow-y-auto h-full">
+                  <UserProfileSettings
+                    user={currentUser}
+                    initialTab="definicoes"
+                    onClose={() => setActiveTab('corporate_sos')}
+                    onUpdateUser={handleUpdateUser}
+                  />
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      );
+    }
 
-  try {
+    // MODO ADMIN / OPERADOR
     return (
       <div className="flex min-h-screen bg-[#F8F9FB] text-slate-900 font-sans relative overflow-x-hidden">
         <Sidebar
           activeTab={activeTab}
           setActiveTab={(tab) => {
             setActiveTab(tab);
-            setIsSidebarOpen(false); // Close sidebar on mobile after selection
+            setIsSidebarOpen(false);
           }}
           userRole={currentUser.role}
           onLogout={handleLogout}
@@ -878,24 +859,24 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'protocols' && (
-              <ProtocolAssistant
+              <ProtocolAssistant 
                 currentUser={currentUser}
-                onAddIncident={(inc) => setIncidents([inc, ...incidents])}
+                onAddIncident={(inc) => setIncidents(prev => [inc, ...prev])}
                 initialData={triageInitialData}
                 onNavigate={setActiveTab}
                 companies={companies}
                 employees={employees}
               />
             )}
-            {activeTab === 'providers' && <AnalyticsDashboard currentUser={currentUser} companies={filteredCompanies} />}
-            {activeTab === 'ambulance_providers' && (
-            <AmbulanceProvidersAdmin
-              companies={companies}
-              ambulances={ambulances}
-              drivers={drivers}
-              onUpdateDrivers={(updated) => setDrivers(updated)}
-            />
-          )}
+            {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} companies={companies} />}
+            {activeTab === 'providers' && (
+              <AmbulanceProvidersAdmin 
+                companies={companies} 
+                ambulances={ambulances} 
+                drivers={drivers}
+                onUpdateDrivers={(updated) => setDrivers(updated)}
+              />
+            )}
             {activeTab === 'my_fleet' && (
               <ProviderFleetDashboard 
                 currentUser={currentUser} 
@@ -906,7 +887,6 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'companies' && <CorporateClientsAdmin companies={filteredCompanies} employees={employees} onAddCompany={handleRegisterCompany} />}
-
             {activeTab === 'profile' && (
               <UserProfileSettings
                 user={currentUser}
@@ -932,39 +912,44 @@ const App: React.FC = () => {
             )}
           </div>
         </main>
+      </div>
+    );
+  };
+
+  try {
+    return (
+      <div className="relative w-full h-full">
+        {renderContent()}
 
         {/* Global SOS Incoming Call Alert */}
         {incomingCallIncident && (
           <div className="fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-500">
             <div className="w-full max-w-md bg-white rounded-[3.5rem] p-12 shadow-2xl text-center relative overflow-hidden border border-white/20">
               <div className="absolute top-0 left-0 right-0 h-2 bg-red-600 animate-pulse"></div>
-
               <div className="relative mb-10">
                 <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping scale-150"></div>
                 <div className="w-32 h-32 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto relative z-10 border-4 border-white shadow-xl">
                   <PhoneCall className="w-14 h-14 animate-bounce" />
                 </div>
               </div>
-
               <div className="space-y-4 mb-10">
                 <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tight">
-                  {currentUser.role === 'GESTOR_FROTA_AMB' ? 'Alerta de Despacho' : 'Chamada de Emergência'}
+                  {currentUser?.role === 'GESTOR_FROTA_AMB' ? 'Alerta de Despacho' : 'Chamada de Emergência'}
                 </h3>
                 <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  currentUser.role === 'GESTOR_FROTA_AMB' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-700 border-red-100'
+                  currentUser?.role === 'GESTOR_FROTA_AMB' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-700 border-red-100'
                 }`}>
                   <Siren className="w-3.5 h-3.5 animate-pulse" />
-                  {currentUser.role === 'GESTOR_FROTA_AMB' ? 'Acompanhamento de Frota' : 'Linha Prioritária SSM'}
+                  {currentUser?.role === 'GESTOR_FROTA_AMB' ? 'Acompanhamento de Frota' : 'Linha Prioritária SSM'}
                 </div>
                 <p className="text-base font-bold text-slate-500 mt-4 leading-relaxed text-center">
-                  {currentUser.role === 'GESTOR_FROTA_AMB' ? (
+                  {currentUser?.role === 'GESTOR_FROTA_AMB' ? (
                     <>Uma viatura da <span className="text-slate-900 font-black">sua frota</span> foi mobilizada para uma ocorrência.</>
                   ) : (
                     <><span className="text-slate-900 font-black">{companies.find(c => c.id === incomingCallIncident.companyId)?.name || 'Cliente Corporativo'}</span> está a solicitar apoio imediato.</>
                   )}
                 </p>
               </div>
-
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
@@ -975,8 +960,7 @@ const App: React.FC = () => {
                       }
                       setActiveCommIncident(inc);
                       setActiveCommIncidentId(inc.id);
-                      
-                      if (currentUser.role === 'GESTOR_FROTA_AMB') {
+                      if (currentUser?.role === 'GESTOR_FROTA_AMB') {
                         setActiveTab('my_fleet');
                       } else {
                         const company = companies.find(c => c.id === inc.companyId);
@@ -986,10 +970,10 @@ const App: React.FC = () => {
                     setIncomingCallIncident(null);
                   }}
                   className={`w-full text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 ${
-                    currentUser.role === 'GESTOR_FROTA_AMB' ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                    currentUser?.role === 'GESTOR_FROTA_AMB' ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
                   }`}
                 >
-                  {currentUser.role === 'GESTOR_FROTA_AMB' ? (
+                  {currentUser?.role === 'GESTOR_FROTA_AMB' ? (
                     <><Activity className="w-5 h-5" /> Acompanhar Missão</>
                   ) : (
                     <><CheckCircle className="w-5 h-5" /> Atender Chamada</>
@@ -999,7 +983,7 @@ const App: React.FC = () => {
                   onClick={() => setIncomingCallIncident(null)}
                   className="w-full bg-white border border-slate-200 text-slate-400 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
                 >
-                  <X className="w-4 h-4" /> {currentUser.role === 'GESTOR_FROTA_AMB' ? 'Ignorar' : 'Recusar'}
+                  <X className="w-4 h-4" /> {currentUser?.role === 'GESTOR_FROTA_AMB' ? 'Ignorar' : 'Recusar'}
                 </button>
               </div>
             </div>
@@ -1013,7 +997,7 @@ const App: React.FC = () => {
               <EmergencyCommunication
                 incidentId={activeCommIncident.id}
                 company={companies.find(c => c.id === activeCommIncident.companyId)}
-                currentUser={currentUser}
+                currentUser={currentUser!}
                 incident={activeCommIncident}
                 onStartTriage={handleStartTriage}
                 isMinimized={commIsMinimized}

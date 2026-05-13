@@ -267,7 +267,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
    // Chat Management
    useEffect(() => {
-      if (incident && showChat) {
+      if (incident && (showChat || webrtcState.activeCall)) {
          const fetchMessages = async () => {
             const logs = await dbService.getCommunicationLogs(incident.id);
             setChatMessages(logs);
@@ -276,6 +276,13 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
          const sub = dbService.subscribeToChat(incident.id, (payload) => {
             const newLog = payload.new;
+            
+            // Handle Hangup Signal
+            if (newLog.type === 'SIGNAL_HANGUP') {
+               webrtcService.current?.endCall();
+               return;
+            }
+
             setChatMessages(prev => [...prev, {
                id: newLog.id,
                incidentId: newLog.incident_id,
@@ -292,7 +299,7 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
          return () => sub.unsubscribe();
       }
-   }, [incident?.id, showChat]);
+   }, [incident?.id, showChat, webrtcState.activeCall]);
 
    useEffect(() => {
       if (isApiReady && mapContainerRef.current && !mapRef.current) {
@@ -441,6 +448,18 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
 
    const handleEndCall = () => {
       webrtcService.current?.endCall();
+      if (incident) {
+         dbService.saveCommunicationLog({
+            incidentId: incident.id,
+            senderId: user.id,
+            senderName: adminName,
+            senderRole: 'MOTORISTA_AMB',
+            recipient: 'Central de Coordenação',
+            message: `Chamada terminada pelo motorista.`,
+            type: 'SIGNAL_HANGUP',
+            isCritical: false
+         });
+      }
    };
 
    const handleSendMessage = async (e: React.FormEvent) => {

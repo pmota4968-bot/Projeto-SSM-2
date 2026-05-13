@@ -112,10 +112,9 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   }, [webrtcState.incomingCall]);
 
   useEffect(() => {
-    setIsCallActive(!!webrtcState.activeCall);
-    if (webrtcState.activeCall) {
+    if (webrtcState.remoteStream) {
+      setIsCallActive(true);
       if (!callTimerRef.current) {
-        setCallDuration(0);
         callTimerRef.current = window.setInterval(() => {
           setCallDuration(prev => prev + 1);
         }, 1000);
@@ -125,12 +124,32 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         clearInterval(callTimerRef.current);
         callTimerRef.current = null;
       }
-      if (panicStep === 'active') {
-        setPanicStep('waiting_dispatch');
-        setTimeout(() => setPanicStep('tracking'), 3500);
-      }
     }
-  }, [webrtcState.activeCall]);
+  }, [webrtcState.remoteStream]);
+
+  // Subscribe to chat for hangup signals
+  useEffect(() => {
+    if (activeIncidentId) {
+      const sub = dbService.subscribeToChat(activeIncidentId, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newLog = payload.new;
+          if (newLog.type === 'SIGNAL_HANGUP') {
+             webrtcService.current?.endCall();
+             setIsCallActive(false);
+             if (callTimerRef.current) {
+               clearInterval(callTimerRef.current);
+               callTimerRef.current = null;
+             }
+             if (panicStep === 'active') {
+               setPanicStep('waiting_dispatch');
+               setTimeout(() => setPanicStep('tracking'), 3500);
+             }
+          }
+        }
+      });
+      return () => sub.unsubscribe();
+    }
+  }, [activeIncidentId, panicStep]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -277,8 +296,28 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   };
 
   const handleEndCall = () => {
+    const duration = formatDuration(callDuration);
     webrtcService.current?.endCall();
     setIsCallActive(false);
+    
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+
+    if (activeIncidentId) {
+      dbService.saveCommunicationLog({
+        incidentId: activeIncidentId,
+        senderId: currentUser.id,
+        senderName: adminName,
+        senderRole: currentUser.role,
+        recipient: 'Coordenação Central',
+        message: `Chamada terminada pelo cliente. Duração: ${duration}`,
+        type: 'SIGNAL_HANGUP',
+        isCritical: false
+      });
+    }
+
     setPanicStep('waiting_dispatch');
     setTimeout(() => {
       setPanicStep('tracking');
@@ -537,11 +576,17 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     </p>
                   </div>
                   
-                  <div className="flex flex-col gap-4">
-                    <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
-                      <Phone className="w-5 h-5" /> Encerrar Chamada
-                    </button>
-                  </div>
+                    <div className="flex flex-col gap-4">
+                      <button 
+                        onClick={() => activeIncidentId && onOpenChat(activeIncidentId)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                      >
+                        <MessageSquare className="w-5 h-5" /> Abrir Chat de Coordenação
+                      </button>
+                      <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+                        <Phone className="w-5 h-5" /> Encerrar Chamada
+                      </button>
+                    </div>
                 </div>
               </div>
             )}

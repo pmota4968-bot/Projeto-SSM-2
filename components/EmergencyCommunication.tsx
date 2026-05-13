@@ -116,6 +116,14 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     const sub = dbService.subscribeToChat(incidentId, (payload) => {
       if (payload.eventType === 'INSERT') {
         const newLog = payload.new;
+        
+        // Auto-hangup detection
+        if (newLog.type === 'SIGNAL_HANGUP' || (newLog.type === 'SYSTEM' && newLog.message?.includes('Chamada terminada'))) {
+          if (isCallActive) {
+            webrtcService.current?.endCall();
+          }
+        }
+
         const formattedLog: CommunicationLog = {
           id: newLog.id,
           incidentId: newLog.incident_id,
@@ -173,7 +181,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
         senderRole: currentUser.role,
         recipient: activeChannel,
         message: inputValue,
-        type: activeTab === 'chat' ? 'SYSTEM' : 'EXTERNAL',
+        type: 'SYSTEM', // Usar SYSTEM para chat interno de coordenação
         isCritical: isCritical
       });
 
@@ -230,6 +238,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
   const endCall = () => {
     const duration = formatDuration(elapsedSeconds);
     webrtcService.current?.endCall();
+    setIsCallActive(false);
 
     if (!currentUser) return;
 
@@ -240,7 +249,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
       senderRole: currentUser.role,
       recipient: activeChannel,
       message: `Chamada terminada. Duração: ${duration}`,
-      type: 'SYSTEM',
+      type: 'SIGNAL_HANGUP', // Sinalizar para a outra ponta fechar
       isCritical: false
     });
   };

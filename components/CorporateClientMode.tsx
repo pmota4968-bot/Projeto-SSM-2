@@ -349,11 +349,12 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!newMessage.trim() || !activeIncidentId) return;
+    const targetId = activeIncidentId || myActiveIncident?.id;
+    if (!newMessage.trim() || !targetId) return;
 
     try {
       await dbService.saveCommunicationLog({
-        incidentId: activeIncidentId,
+        incidentId: targetId,
         senderId: currentUser.id,
         senderName: adminName,
         senderRole: currentUser.role,
@@ -417,13 +418,48 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                   </div>
                   <div className="space-y-3">
                     <button
-                      onClick={() => activeIncidentId && onOpenChat(activeIncidentId)}
-                      className="w-full bg-[#E0F2FE] text-slate-900 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-slate-100 border border-blue-100"
+                      onClick={() => {
+                        const id = myActiveIncident?.id || activeIncidentId;
+                        if (id) onOpenChat(id);
+                        else alert("Nenhuma emergência ativa encontrada.");
+                      }}
+                      className="w-full bg-[#E0F2FE] text-slate-900 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-slate-100 border border-blue-100 shadow-sm active:scale-95"
                     >
-                      <MessageSquare className="w-4 h-4" /> Chat com a Coordenação
+                      <MessageSquare className="w-5 h-5 text-blue-600" /> Chat com a Coordenação
                     </button>
                     <div className="bg-[#EBFDF5] text-[#065F46] px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 border border-[#D1FAE5]">
                       <ShieldCheck className="w-4 h-4" /> Rede Primária de Resposta Validada
+                    </div>
+                  </div>
+
+                  {/* Chat Integrado para Persistência no Rastreio */}
+                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex-1 flex flex-col min-h-[300px]">
+                    <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <MessageSquare className="w-3 h-3 text-blue-600" /> Comunicação em Tempo Real
+                    </h4>
+                    <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar pr-1 space-y-3">
+                      {chatMessages.length === 0 && <p className="text-[9px] font-bold text-slate-400 text-center py-8 uppercase tracking-widest">Sem mensagens no chat</p>}
+                      {chatMessages.map(m => (
+                        <div key={m.id} className={`flex flex-col ${m.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                          <span className="text-[7px] font-black uppercase text-slate-400 mb-0.5 px-1">{m.senderName}</span>
+                          <div className={`p-3 rounded-xl text-[10px] font-bold leading-relaxed shadow-sm ${m.senderId === currentUser.id ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
+                            {m.message}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Mensagem..."
+                        className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                      />
+                      <button onClick={() => handleSendMessage()} className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg transition-all active:scale-90">
+                        <Send className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -649,6 +685,19 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                             <Send className="w-5 h-5" />
                           </button>
                         </div>
+                      </div>
+
+                      <div className="flex flex-col gap-4 mb-8">
+                        <button 
+                          onClick={() => {
+                            const id = activeIncidentId || myActiveIncident?.id;
+                            if (id) onOpenChat(id);
+                            else alert("Nenhuma emergência ativa encontrada.");
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                        >
+                          <MessageSquare className="w-5 h-5" /> Abrir Chat de Coordenação
+                        </button>
                       </div>
 
                       <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-7 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">

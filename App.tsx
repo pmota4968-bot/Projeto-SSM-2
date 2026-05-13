@@ -886,7 +886,14 @@ const App: React.FC = () => {
             {activeTab === 'protocols' && (
               <ProtocolAssistant 
                 currentUser={currentUser}
-                onAddIncident={(inc) => setIncidents(prev => [inc, ...prev])}
+                onAddIncident={async (inc) => {
+                  setIncidents(prev => [inc, ...prev]);
+                  try {
+                    await dbService.saveIncident(inc);
+                  } catch (err) {
+                    console.error("Erro ao salvar incidente da triagem:", err);
+                  }
+                }}
                 initialData={triageInitialData}
                 onNavigate={setActiveTab}
                 companies={companies}

@@ -341,6 +341,7 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
                                           <Plus className="w-4 h-4 text-slate-200 group-hover:text-blue-600" />
                                         </button>
                                       ))}
+                                      </div>
                                     </div>
                                   </div>
                                 )}

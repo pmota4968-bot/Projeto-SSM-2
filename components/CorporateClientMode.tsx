@@ -4,7 +4,7 @@ import {
   Siren, Phone, MapPin, ShieldCheck, Activity, X,
   Heart, Bell, AlertCircle, CheckCircle2, Info, Clock,
   ChevronRight, Shield, Navigation, Truck, User, PhoneCall,
-  MessageSquare, AlertTriangle
+  MessageSquare, AlertTriangle, Send
 } from 'lucide-react';
 import { AMBULANCES } from '../constants';
 import { auditLogger } from '../services/auditLogger';
@@ -703,7 +703,6 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                       <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-7 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
                         <Phone className="w-5 h-5" /> Encerrar Chamada
                       </button>
-                    </div>
                 </div>
               </div>
             )}

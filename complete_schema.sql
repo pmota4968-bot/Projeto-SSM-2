@@ -216,3 +216,27 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Communication Logs (Chat) - Allow all authenticated users to read and write
+DROP POLICY IF EXISTS "Communication logs access" ON public.communication_logs;
+CREATE POLICY "Communication logs access" ON public.communication_logs
+FOR ALL USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Activity Logs - Allow all authenticated users to insert, admins to read
+DROP POLICY IF EXISTS "Activity logs access" ON public.activity_logs;
+CREATE POLICY "Activity logs access" ON public.activity_logs
+FOR ALL USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- GPS Tracks - Allow all authenticated users
+DROP POLICY IF EXISTS "GPS tracks access" ON public.gps_tracks;
+CREATE POLICY "GPS tracks access" ON public.gps_tracks
+FOR ALL USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Companies - Allow all authenticated users to read, admins to modify
+DROP POLICY IF EXISTS "Companies access" ON public.companies;
+CREATE POLICY "Companies access" ON public.companies
+FOR ALL USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);

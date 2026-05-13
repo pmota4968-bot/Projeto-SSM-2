@@ -763,8 +763,7 @@ const App: React.FC = () => {
                     setActiveCommIncidentId(id);
                     setCommIsMinimized(false);
                   }}
-                  onTriggerEmergency={async () => {
-                    const incidentId = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
+                  onTriggerEmergency={async (incidentId: string) => {
                     const newInc: EmergencyCase = {
                       id: incidentId,
                       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

@@ -14,7 +14,7 @@ import { loadGoogleMaps } from '../services/googleMapsLoader';
 import { dbService } from '../services/dbService';
 
 interface CorporateClientModeProps {
-  onTriggerEmergency: () => void;
+  onTriggerEmergency: (incidentId: string) => void;
   onLogout: () => void;
   adminName: string;
   companyId?: string;
@@ -303,7 +303,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     setTimeout(() => {
       const id = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
       setActiveIncidentId(id);
-      onTriggerEmergency();
+      onTriggerEmergency(id);
       setPanicStep('active');
 
       // Quando ativar SOS, a central vai ligar para o cliente

@@ -70,7 +70,10 @@ const App: React.FC = () => {
   }, [currentUser?.role]);
 
   useEffect(() => {
-    if (webrtcState.incomingCall && !activeCommIncidentId && !incomingCallIncident) {
+    // Apenas Administradores e Operadores devem ver o alerta de "Atender Chamada" via WebRTC
+    const isAdminOrOperator = currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'OPERADOR_COORD';
+    
+    if (isAdminOrOperator && webrtcState.incomingCall && !activeCommIncidentId && !incomingCallIncident) {
       // Se receber uma chamada, tentamos associar a um SOS recente (nos últimos 5 minutos)
       let recentSOS = incidents.find(i => {
         const isSOS = i.status === 'active' && i.priority === EmergencyPriority.CRITICAL;
@@ -141,6 +144,12 @@ const App: React.FC = () => {
       inc => {
         const isSOS = inc.status === 'active' && inc.priority === EmergencyPriority.CRITICAL && inc.id.startsWith('SOS-');
         if (!isSOS) return false;
+
+        // NÃO disparar alerta para o próprio solicitante (Empresa que ativou o SOS)
+        const isSelfTriggered = currentUser?.companyId && inc.companyId === currentUser.companyId && 
+          ['COLABORADOR_RH', 'ADMIN_CLIENTE', 'RESPONSAVEL_EMERG_CLIENTE'].includes(currentUser.role);
+        
+        if (isSelfTriggered) return false;
 
         // Verificação de tempo (Recency Check)
         const createdAt = inc.created_at ? new Date(inc.created_at).getTime() : Date.now();

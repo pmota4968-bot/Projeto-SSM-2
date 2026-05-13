@@ -57,11 +57,18 @@ const App: React.FC = () => {
 
   // Inicialização do WebRTC Central
   useEffect(() => {
-    if ((currentUser?.role === 'ADMIN_SSM' || currentUser?.role === 'OPERADOR_COORD') && !webrtcService.current) {
+    const needsCentralWebRTC = ['ADMIN_SSM', 'OPERADOR_COORD', 'GESTOR_FROTA_AMB'].includes(currentUser?.role || '');
+    if (needsCentralWebRTC && !webrtcService.current) {
       webrtcService.current = new WebRTCService((stateUpdate) => {
         setWebrtcState(prev => ({ ...prev, ...stateUpdate }));
       });
-      webrtcService.current.initialize('ssm-central-MAIN');
+      
+      // Fleet Managers use their own ID to avoid collisions, Admins use MAIN
+      const pId = currentUser?.role === 'GESTOR_FROTA_AMB' 
+        ? `ssm-fleet-${currentUser.companyId}`
+        : 'ssm-central-MAIN';
+        
+      webrtcService.current.initialize(pId);
     }
     return () => {
       webrtcService.current?.destroy();
@@ -106,7 +113,13 @@ const App: React.FC = () => {
   useEffect(() => {
     if (activeCommIncidentId) {
       const inc = incidents.find(i => i.id === activeCommIncidentId);
-      if (inc) setActiveCommIncident(inc);
+      if (inc) {
+        setActiveCommIncident(inc);
+        // Se abrimos um incidente, garantimos que o modal não está minimizado
+        setCommIsMinimized(false);
+      }
+    } else {
+      setActiveCommIncident(null);
     }
   }, [activeCommIncidentId, incidents]);
 
@@ -847,7 +860,10 @@ const App: React.FC = () => {
                 ambulances={ambulances}
                 companies={companies}
                 onStartTriage={handleStartTriage}
-                onOpenComm={setActiveCommIncidentId}
+                onOpenComm={(id) => {
+                  setActiveCommIncidentId(id);
+                  setCommIsMinimized(false);
+                }}
                 resources={resources}
               />
             )}
@@ -967,8 +983,11 @@ const App: React.FC = () => {
                       if (inc.id.startsWith('CALL-')) {
                         setIncidents(prev => [inc, ...prev]);
                       }
+                      // Prioridade: Abrir o Canal de Comunicação OC
                       setActiveCommIncident(inc);
                       setActiveCommIncidentId(inc.id);
+                      setCommIsMinimized(false); // Garantir que abre aberto
+
                       if (currentUser?.role === 'GESTOR_FROTA_AMB') {
                         setActiveTab('my_fleet');
                       } else {

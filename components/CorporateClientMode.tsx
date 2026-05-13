@@ -46,6 +46,8 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   const [isCallActive, setIsCallActive] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const callTimerRef = useRef<number | null>(null);
+  const [chatMessages, setChatMessages] = useState<CommunicationLog[]>([]);
+  const [newMessage, setNewMessage] = useState('');
   const [eta, setEta] = useState(8);
   const [ambulancePos, setAmbulancePos] = useState<[number, number]>([-25.965, 32.575]);
 
@@ -127,12 +129,20 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     }
   }, [webrtcState.remoteStream]);
 
-  // Subscribe to chat for hangup signals
+  // Subscribe to chat for logs and hangup signals
   useEffect(() => {
     if (activeIncidentId) {
+      const fetchLogs = async () => {
+        const data = await dbService.getCommunicationLogs(activeIncidentId);
+        setChatMessages(data);
+      };
+      fetchLogs();
+
       const sub = dbService.subscribeToChat(activeIncidentId, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newLog = payload.new;
+
+          // Handle Hangup Signal
           if (newLog.type === 'SIGNAL_HANGUP') {
              webrtcService.current?.endCall();
              setIsCallActive(false);
@@ -145,6 +155,19 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                setTimeout(() => setPanicStep('tracking'), 3500);
              }
           }
+
+          setChatMessages(prev => [...prev, {
+            id: newLog.id,
+            incidentId: newLog.incident_id,
+            senderId: newLog.sender_id,
+            senderName: newLog.sender_name,
+            senderRole: newLog.sender_role,
+            recipient: newLog.recipient,
+            message: newLog.message,
+            type: newLog.type,
+            isCritical: newLog.is_critical,
+            timestamp: newLog.timestamp
+          }]);
         }
       });
       return () => sub.unsubscribe();
@@ -322,6 +345,27 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     setTimeout(() => {
       setPanicStep('tracking');
     }, 3500);
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newMessage.trim() || !activeIncidentId) return;
+
+    try {
+      await dbService.saveCommunicationLog({
+        incidentId: activeIncidentId,
+        senderId: currentUser.id,
+        senderName: adminName,
+        senderRole: currentUser.role,
+        recipient: 'Coordenação Central',
+        message: newMessage,
+        type: 'SYSTEM',
+        isCritical: false
+      });
+      setNewMessage('');
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+    }
   };
 
   return (
@@ -576,14 +620,38 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
                     </p>
                   </div>
                   
-                    <div className="flex flex-col gap-4">
-                      <button 
-                        onClick={() => activeIncidentId && onOpenChat(activeIncidentId)}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
-                      >
-                        <MessageSquare className="w-5 h-5" /> Abrir Chat de Coordenação
-                      </button>
-                      <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+                      {/* Chat Integrado para Persistência */}
+                      <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 text-left mb-8">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                          <MessageSquare className="w-3 h-3" /> Chat de Emergência
+                        </p>
+                        <div className="h-40 overflow-y-auto mb-6 custom-scrollbar pr-2 space-y-4">
+                          {chatMessages.length === 0 && <p className="text-[10px] font-bold text-slate-400 text-center py-4 uppercase">Sem mensagens ainda</p>}
+                          {chatMessages.map(m => (
+                            <div key={m.id} className={`flex flex-col ${m.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                              <span className="text-[8px] font-black uppercase text-slate-400 mb-1 px-1">{m.senderName}</span>
+                              <div className={`p-3 rounded-2xl text-[11px] font-bold leading-relaxed shadow-sm ${m.senderId === currentUser.id ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
+                                {m.message}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-3">
+                          <input 
+                            type="text" 
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Escreva uma mensagem..."
+                            className="flex-1 bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                          />
+                          <button onClick={() => handleSendMessage()} className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl shadow-lg transition-all active:scale-90">
+                            <Send className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-7 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
                         <Phone className="w-5 h-5" /> Encerrar Chamada
                       </button>
                     </div>

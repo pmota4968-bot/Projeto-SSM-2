@@ -121,6 +121,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
         if (newLog.type === 'SIGNAL_HANGUP' || (newLog.type === 'SYSTEM' && newLog.message?.includes('Chamada terminada'))) {
           if (isCallActive) {
             webrtcService.current?.endCall();
+            setIsCallActive(false);
           }
         }
 
@@ -407,7 +408,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
       {/* Conteúdo Dinâmico */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[350px] max-h-[450px] bg-[#FAFBFE] custom-scrollbar relative">
         {activeTab === 'chat' ? (
-          logs.filter(l => l.recipient === activeChannel).map(log => (
+          logs.map(log => (
             <div key={log.id} className={`flex gap-3 ${log.senderId === currentUser?.id ? 'flex-row-reverse' : 'flex-row'} animate-in slide-in-from-bottom-2`}>
               <div className={`flex flex-col max-w-[80%] ${log.senderId === currentUser?.id ? 'items-end' : 'items-start'}`}>
                 {log.senderId !== currentUser?.id && <span className="text-[10px] font-black text-slate-900 mb-1 ml-1">{log.senderName}</span>}

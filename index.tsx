@@ -21,6 +21,13 @@ window.onerror = function (message, source, lineno, colno, error) {
 };
 
 window.onunhandledrejection = function (event) {
+  // Ignorar erros benignos do Supabase JS relacionados a Lock/Abort
+  if (event.reason?.name === 'AbortError' || (event.reason?.message && event.reason.message.includes('Lock'))) {
+    console.warn('Suprimido erro de Lock Stolen / Abort do Supabase para evitar crash visual da app.');
+    event.preventDefault();
+    return;
+  }
+
   const root = document.getElementById('root');
   if (root) {
     root.innerHTML = `

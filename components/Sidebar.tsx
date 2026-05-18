@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, ClipboardList, Siren, Users, Settings, LogOut, Truck, Building2, UserCircle, ShieldAlert, UserPlus, X } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Siren, Users, Settings, LogOut, Truck, Building2, UserCircle, ShieldAlert, UserPlus, X, FileBarChart } from 'lucide-react';
 import SSMLogo from './SSMLogo';
 import { UserRole } from '../types';
 
@@ -25,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
     { id: 'ambulance_providers', icon: Truck, label: 'PROVEDORES AMB', roles: ['ADMIN_SSM'] },
     { id: 'my_fleet', icon: LayoutDashboard, label: 'A MINHA FROTA', roles: ['GESTOR_FROTA_AMB'] },
     { id: 'map', icon: Siren, label: 'EMERGÊNCIA', roles: ['ADMIN_SSM', 'OPERADOR_COORD'] },
+    { id: 'reports', icon: FileBarChart, label: 'RELATÓRIOS', roles: ['ADMIN_SSM', 'GESTOR_RISCO'] },
     { id: 'providers', icon: Users, label: 'GESTÃO SSM', roles: ['ADMIN_SSM', 'GESTOR_RISCO'] },
   ].filter(item => item.roles.includes(userRole));
 

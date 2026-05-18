@@ -300,22 +300,19 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
 
   const triggerEmergencyProcess = () => {
     setPanicStep('activating');
-    setTimeout(() => {
-      const id = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
-      setActiveIncidentId(id);
-      onTriggerEmergency(id);
-      setPanicStep('active');
+    const id = `SOS-${Math.floor(Math.random() * 9000) + 1000}`;
+    setActiveIncidentId(id);
+    onTriggerEmergency(id);
+    setPanicStep('active');
 
-      // Quando ativar SOS, a central vai ligar para o cliente
-      // Ou o cliente pode ligar para a central: ssm-central-MAIN
-      webrtcService.current?.startCall(`ssm-central-MAIN`, false);
+    // Quando ativar SOS, a central vai ligar para o cliente
+    webrtcService.current?.startCall(`ssm-central-MAIN`, false);
 
-      auditLogger.log(
-        { id: 'EMP-SOS', name: adminName, role: 'COLABORADOR_RH', companyId: companyId },
-        'CORPORATE_SOS_TRIGGERED',
-        companyId
-      );
-    }, 1500);
+    auditLogger.log(
+      { id: 'EMP-SOS', name: adminName, role: 'COLABORADOR_RH', companyId: companyId },
+      'CORPORATE_SOS_TRIGGERED',
+      companyId
+    );
   };
 
   const handleEndCall = () => {
@@ -338,7 +335,7 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         message: `Chamada terminada pelo cliente. Duração: ${duration}`,
         type: 'SIGNAL_HANGUP',
         isCritical: false
-      });
+      }).catch(console.error);
     }
 
     setPanicStep('waiting_dispatch');
@@ -347,11 +344,14 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     }, 3500);
   };
 
+  const [isSending, setIsSending] = useState(false);
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const targetId = activeIncidentId || myActiveIncident?.id;
-    if (!newMessage.trim() || !targetId) return;
+    if (!newMessage.trim() || !targetId || isSending) return;
 
+    setIsSending(true);
     try {
       await dbService.saveCommunicationLog({
         incidentId: targetId,
@@ -364,8 +364,11 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
         isCritical: false
       });
       setNewMessage('');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao enviar mensagem:", err);
+      alert(`Erro ao enviar mensagem: ${err?.message || 'Tente novamente.'}`);
+    } finally {
+      setIsSending(false);
     }
   };
 

@@ -169,11 +169,17 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-
+  const [isSending, setIsSending] = useState(false);
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !currentUser) return;
+    if (!inputValue.trim()) return;
+    if (!currentUser) {
+      console.error("Chat: currentUser é null/undefined. Sessão pode ter expirado.");
+      alert("Erro: Sessão não detectada. Tente fazer logout e login novamente.");
+      return;
+    }
 
+    setIsSending(true);
     try {
       await dbService.saveCommunicationLog({
         incidentId: incidentId,
@@ -182,15 +188,17 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
         senderRole: currentUser.role,
         recipient: activeChannel,
         message: inputValue,
-        type: 'SYSTEM', // Usar SYSTEM para chat interno de coordenação
+        type: 'SYSTEM',
         isCritical: isCritical
       });
 
       setInputValue('');
       setIsCritical(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao enviar mensagem:", err);
-      alert("Erro ao enviar mensagem. Tente novamente.");
+      alert(`Erro ao enviar mensagem: ${err?.message || 'Tente novamente.'}`);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -531,10 +539,10 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || isSending}
               className={`px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 shadow-lg transition-all disabled:opacity-30 ${isCritical ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'}`}
             >
-              <Send className="w-4 h-4" /> Enviar
+              <Send className={`w-4 h-4 ${isSending ? 'animate-pulse' : ''}`} /> {isSending ? 'A enviar...' : 'Enviar'}
             </button>
           </div>
         </div>

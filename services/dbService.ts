@@ -627,28 +627,46 @@ export const dbService = {
 
     // Communication Logs (Chat)
     async getCommunicationLogs(incidentId: string): Promise<any[]> {
-        const { data, error } = await supabase
-            .from('communication_logs')
-            .select('*')
-            .eq('incident_id', incidentId)
-            .order('timestamp', { ascending: true });
-        if (error) throw error;
-        return data.map(log => ({
-            id: log.id,
-            incidentId: log.incident_id,
-            senderId: log.sender_id,
-            senderName: log.sender_name,
-            senderRole: log.sender_role,
-            recipient: log.recipient,
-            message: log.message,
-            type: log.type,
-            isCritical: log.is_critical,
-            timestamp: log.timestamp
-        }));
+        try {
+            const { data, error } = await supabase
+                .from('communication_logs')
+                .select('*')
+                .eq('incident_id', incidentId)
+                .order('timestamp', { ascending: true });
+            if (error) {
+                console.error("Erro ao carregar logs:", error.message, error.code);
+                return [];
+            }
+            return (data || []).map(log => ({
+                id: log.id,
+                incidentId: log.incident_id,
+                senderId: log.sender_id,
+                senderName: log.sender_name,
+                senderRole: log.sender_role,
+                recipient: log.recipient,
+                message: log.message,
+                type: log.type,
+                isCritical: log.is_critical,
+                timestamp: log.timestamp
+            }));
+        } catch (err) {
+            console.error("Erro crítico ao carregar logs:", err);
+            return [];
+        }
     },
 
     async saveCommunicationLog(log: any) {
-        const { data, error } = await supabase.from('communication_logs').insert({
+        // Verify we have an active session before attempting
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session) {
+            console.error("Chat: Sem sessão Supabase ativa. A tentar refrescar...");
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+                throw new Error(`Sessão expirada. Faça login novamente. (${refreshError.message})`);
+            }
+        }
+
+        const payload = {
             incident_id: log.incidentId,
             sender_id: log.senderId,
             sender_name: log.senderName,
@@ -657,9 +675,27 @@ export const dbService = {
             message: log.message,
             type: log.type,
             is_critical: log.isCritical
-        });
-        if (error) throw error;
-        return data;
+        };
+
+        // Retry logic for FK violations (incident might not be saved yet)
+        let retries = 3;
+        let lastError: any = null;
+        while (retries > 0) {
+            const { data, error } = await supabase.from('communication_logs').insert(payload);
+            if (!error) return data;
+
+            lastError = error;
+            // FK violation - incident_id not found yet
+            if (error.code === '23503') {
+                retries--;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+            }
+            // RLS or other error
+            console.error("Chat send error:", error.message, error.code, error.details);
+            throw error;
+        }
+        throw lastError;
     },
 
     subscribeToChat(incidentId: string, callback: (payload: any) => void) {

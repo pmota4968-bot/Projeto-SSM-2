@@ -17,6 +17,7 @@ import UserProfileSettings from './components/UserProfileSettings';
 import AccountManagement from './components/AccountManagement';
 import AmbulanceProvidersAdmin from './components/AmbulanceProvidersAdmin';
 import ProviderFleetDashboard from './components/ProviderFleetDashboard';
+import IncidentReports from './components/IncidentReports';
 import Login from './components/Login';
 import {
   EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, Driver, Employee, Company, Resource, CommunicationLog, OperationReport
@@ -900,6 +901,13 @@ const App: React.FC = () => {
               />
             )}
             {activeTab === 'analytics' && <AnalyticsDashboard currentUser={currentUser} companies={companies} />}
+            {activeTab === 'reports' && (
+              <IncidentReports 
+                incidents={incidents} 
+                companies={companies} 
+                currentUser={currentUser!} 
+              />
+            )}
             {activeTab === 'providers' && (
               <AmbulanceProvidersAdmin 
                 companies={companies} 

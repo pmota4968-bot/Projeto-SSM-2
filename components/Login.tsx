@@ -73,26 +73,76 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
       }, 15000);
 
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: input.includes('@') ? input : `${input.toLowerCase()}@ssm.mz`,
-        password: password,
-      });
+      const email = input.includes('@') ? input : `${input.toLowerCase()}@ssm.mz`;
+      let authData;
+      let authError;
+
+      try {
+        const res = await supabase.auth.signInWithPassword({
+          email,
+          password: password,
+        });
+        authData = res.data;
+        authError = res.error;
+      } catch (err: any) {
+        if (err.name === 'AbortError' || (err.message && err.message.includes('Lock'))) {
+          console.warn('Sessão interrompida (Lock Stolen), a tentar novamente...');
+          await new Promise(r => setTimeout(r, 800));
+          const retryRes = await supabase.auth.signInWithPassword({ email, password });
+          authData = retryRes.data;
+          authError = retryRes.error;
+        } else {
+          throw err;
+        }
+      }
+
+      // Auto-registo de perfis DEMO se as credenciais forem inválidas (utilizador não existe)
+      if (authError && authError.message.includes('Invalid login credentials')) {
+        console.log("Credenciais inválidas ou utilizador inexistente. A tentar criar perfil DEMO automático...");
+        
+        let role = 'USER';
+        const upperInput = input.toUpperCase();
+        if (upperInput.startsWith('ADM')) role = 'ADMIN_SSM';
+        else if (upperInput.startsWith('OP')) role = 'OPERADOR_COORD';
+        else if (upperInput.startsWith('DRV') || upperInput.startsWith('MOT')) role = 'MOTORISTA_AMB';
+        else if (upperInput.startsWith('GES')) role = 'GESTOR_FROTA_AMB';
+        else if (upperInput.startsWith('CLI') || upperInput.startsWith('EMP')) role = 'ADMIN_CLIENTE';
+
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password: password,
+          options: {
+            data: {
+              full_name: `Demo ${upperInput}`,
+              role: role,
+              company_id: 'COMP-1234' // Default company for demo
+            }
+          }
+        });
+
+        if (!signUpError && signUpData.user) {
+          authData = signUpData;
+          authError = null;
+        } else {
+          authError = signUpError || authError;
+        }
+      }
 
       clearTimeout(failSafeTimer);
 
       if (authError) throw authError;
 
-      if (data.user) {
+      if (authData?.user) {
         // Redução de redundância: não buscamos o perfil aqui.
         // O App.tsx tratará disso via onAuthStateChange.
         // Criamos um objeto básico para o feedback visual de Welcome.
         user = {
-          id: data.user.id,
-          name: data.user.user_metadata?.full_name || 'Utilizador',
-          role: data.user.user_metadata?.role || 'USER',
-          companyId: data.user.user_metadata?.company_id?.toString().trim(),
-          email: data.user.email || '',
-          avatar: data.user.user_metadata?.avatar_url
+          id: authData.user.id,
+          name: authData.user.user_metadata?.full_name || 'Utilizador',
+          role: authData.user.user_metadata?.role || 'USER',
+          companyId: authData.user.user_metadata?.company_id?.toString().trim(),
+          email: authData.user.email || '',
+          avatar: authData.user.user_metadata?.avatar_url
         } as AdminUser;
       }
     } catch (err: any) {

@@ -674,7 +674,7 @@ const App: React.FC = () => {
       }
     }
 
-    supabase.auth.signOut().catch(err => {
+    supabase.auth.signOut({ scope: 'local' }).catch(err => {
       console.error("Erro ao terminar sessão no Supabase:", err);
     });
   };

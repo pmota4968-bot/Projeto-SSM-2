@@ -23,7 +23,7 @@ import {
   EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, Driver, Employee, Company, Resource, CommunicationLog, OperationReport
 } from './types';
 import {
-  Siren, PhoneCall, CheckCircle, X, Activity
+  Siren, PhoneCall, CheckCircle, X, Activity, ShieldAlert
 } from 'lucide-react';
 import EmergencyCommunication from './components/EmergencyCommunication';
 import { COMPANIES as INITIAL_COMPANIES, ADMINS, AMBULANCES as INITIAL_AMBULANCES, EMPLOYEES as INITIAL_EMPLOYEES, RESOURCES as INITIAL_RESOURCES } from './constants';
@@ -667,8 +667,11 @@ const App: React.FC = () => {
     } finally {
       // Garantimos que o estado local é limpo imediatamente para o utilizador
       setCurrentUser(null);
-      // Opcional: Limpar dados residuais do localStorage se houver
+      // Opcional: Limpar dados residuais do localStorage e sessionStorage se houver
       localStorage.removeItem('supabase.auth.token');
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.clear();
+      }
     }
 
     supabase.auth.signOut().catch(err => {
@@ -679,6 +682,39 @@ const App: React.FC = () => {
   // RENDER LOGIC
   const renderContent = () => {
     if (!currentUser) return <Login onLoginSuccess={handleLogin} />;
+
+    const validRoles = [
+      'ADMIN_SSM',
+      'OPERADOR_COORD',
+      'GESTOR_RISCO',
+      'MOTORISTA_AMB',
+      'GESTOR_FROTA_AMB',
+      'ADMIN_CLIENTE',
+      'RESPONSAVEL_EMERG_CLIENTE',
+      'COLABORADOR_RH'
+    ];
+
+    if (!validRoles.includes(currentUser.role)) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#F8F9FB] p-6 text-center animate-in fade-in duration-500">
+          <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-3xl flex items-center justify-center mb-6 border border-orange-100">
+            <ShieldAlert className="w-10 h-10 animate-pulse" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Aguardando Atribuição de Função</h2>
+          <p className="text-sm text-slate-500 max-w-md mb-8 leading-relaxed font-medium">
+            Olá, <strong className="text-slate-900">{currentUser.name}</strong>. A sua conta ({currentUser.email || currentUser.id}) foi registada, mas ainda não tem uma função de acesso atribuída no sistema SSM.
+          </p>
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <button
+              onClick={handleLogout}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-slate-900/10 active:scale-95"
+            >
+              Terminar Sessão
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     // MODO MOTORISTA
     if (currentUser.role === 'MOTORISTA_AMB') {

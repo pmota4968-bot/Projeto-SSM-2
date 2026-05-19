@@ -32,10 +32,14 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({
   const [showCriticalModal, setShowCriticalModal] = useState<{ field: string, value: any } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Form states
   const [formData, setFormData] = useState<AdminUser>(user);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sincronizar o estado do formulário se o perfil do utilizador carregar em segundo plano
+  React.useEffect(() => {
+    setFormData(user);
+  }, [user]);
 
   const showToast = (type: 'success' | 'error' | 'warning', message: string) => {
     setToast({ type, message });

@@ -180,6 +180,7 @@ const ProtocolAssistant: React.FC<ProtocolAssistantProps> = ({
       type: triageData.patients.map(p => `${p.name}: ${p.classification}`).join(' | '),
       status: 'active',
       priority: suggestion.classification as any,
+      locationName: triageData.location || 'Local Não Especificado',
       coords: [-25.9692 + (Math.random() - 0.5) * 0.01, 32.5732 + (Math.random() - 0.5) * 0.01],
       patientName: triageData.patients[0]?.name || 'Múltiplos Pacientes',
       patientCount: triageData.patientCount,

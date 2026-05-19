@@ -23,7 +23,7 @@ import {
   EmergencyCase, EmergencyPriority, AdminUser, AmbulanceState, Driver, Employee, Company, Resource, CommunicationLog, OperationReport
 } from './types';
 import {
-  Siren, PhoneCall, CheckCircle, X
+  Siren, PhoneCall, CheckCircle, X, Activity
 } from 'lucide-react';
 import EmergencyCommunication from './components/EmergencyCommunication';
 import { COMPANIES as INITIAL_COMPANIES, ADMINS, AMBULANCES as INITIAL_AMBULANCES, EMPLOYEES as INITIAL_EMPLOYEES, RESOURCES as INITIAL_RESOURCES } from './constants';

@@ -280,7 +280,6 @@ const AmbulanceMode: React.FC<AmbulanceModeProps> = ({
             // Handle Hangup Signal
             if (newLog.type === 'SIGNAL_HANGUP') {
                webrtcService.current?.endCall();
-               setIsCallActive(false);
                return;
             }
 

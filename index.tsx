@@ -1,8 +1,62 @@
+// --- TAB ISOLATION CHECKER ---
+(function() {
+  if (typeof window === 'undefined') return;
+
+  function generateId() {
+    return 'ssm_tab_' + Math.random().toString(36).substring(2, 11);
+  }
+
+  let tabId = sessionStorage.getItem('ssm_tab_id');
+
+  if (!tabId) {
+    tabId = generateId();
+    sessionStorage.setItem('ssm_tab_id', tabId);
+    window.name = tabId;
+  } else {
+    if (!window.name) {
+      window.name = tabId;
+    }
+    
+    try {
+      const channel = new BroadcastChannel('ssm_tab_validation');
+
+      channel.onmessage = (event) => {
+        const { type, id } = event.data;
+        if (type === 'ping' && id === tabId) {
+          channel.postMessage({ type: 'pong', id: tabId });
+        } else if (type === 'pong' && id === tabId) {
+          const newTabId = generateId();
+          sessionStorage.setItem('ssm_tab_id', newTabId);
+          window.name = newTabId;
+
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const key = sessionStorage.key(i);
+            if (key && key.startsWith('supabase-auth')) {
+              sessionStorage.removeItem(key);
+            }
+          }
+
+          channel.close();
+          window.location.reload();
+        }
+      };
+
+      channel.postMessage({ type: 'ping', id: tabId });
+      
+      window.addEventListener('beforeunload', () => {
+        channel.close();
+      });
+    } catch (e) {
+      console.warn('BroadcastChannel not supported:', e);
+    }
+  }
+})();
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+
 
 // --- DIAGNOSTIC ERROR CATCHER ---
 window.onerror = function (message, source, lineno, colno, error) {

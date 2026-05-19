@@ -670,7 +670,12 @@ const App: React.FC = () => {
       // Opcional: Limpar dados residuais do localStorage e sessionStorage se houver
       localStorage.removeItem('supabase.auth.token');
       if (typeof window !== 'undefined') {
-        window.sessionStorage.clear();
+        for (let i = window.sessionStorage.length - 1; i >= 0; i--) {
+          const key = window.sessionStorage.key(i);
+          if (key && key.startsWith('supabase-auth')) {
+            window.sessionStorage.removeItem(key);
+          }
+        }
       }
     }
 

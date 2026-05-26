@@ -1032,11 +1032,16 @@ const App: React.FC = () => {
               </div>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const inc = incomingCallIncident;
                     if (inc) {
                       if (inc.id.startsWith('CALL-')) {
                         setIncidents(prev => [inc, ...prev]);
+                        try {
+                          await dbService.saveIncident(inc);
+                        } catch (err) {
+                          console.error("Erro ao salvar incidente de chamada no banco:", err);
+                        }
                       }
                       // Prioridade: Abrir o Canal de Comunicação OC
                       setActiveCommIncident(inc);

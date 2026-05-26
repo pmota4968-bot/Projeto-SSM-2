@@ -100,7 +100,7 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
     }
   }, [webrtcState.activeCall, webrtcState.incomingCall]);
 
-  // Load and Subscribe to Chat Logs
+  // Load, Subscribe and Poll Chat Logs
   useEffect(() => {
     const fetchLogs = async () => {
       try {
@@ -144,8 +144,11 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
       }
     });
 
+    const interval = setInterval(fetchLogs, 3000);
+
     return () => {
       sub.unsubscribe();
+      clearInterval(interval);
     };
   }, [incidentId]);
 

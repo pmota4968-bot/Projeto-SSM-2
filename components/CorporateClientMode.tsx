@@ -129,16 +129,21 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     }
   }, [webrtcState.remoteStream]);
 
-  // Subscribe to chat for logs and hangup signals
+  // Subscribe to chat and poll for logs/hangup signals
   useEffect(() => {
-    if (activeIncidentId) {
+    const targetId = activeIncidentId || myActiveIncident?.id;
+    if (targetId) {
       const fetchLogs = async () => {
-        const data = await dbService.getCommunicationLogs(activeIncidentId);
-        setChatMessages(data);
+        try {
+          const data = await dbService.getCommunicationLogs(targetId);
+          setChatMessages(data);
+        } catch (err) {
+          console.error("Erro ao buscar logs do chat:", err);
+        }
       };
       fetchLogs();
 
-      const sub = dbService.subscribeToChat(activeIncidentId, (payload) => {
+      const sub = dbService.subscribeToChat(targetId, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newLog = payload.new;
 
@@ -156,23 +161,32 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
              }
           }
 
-          setChatMessages(prev => [...prev, {
-            id: newLog.id,
-            incidentId: newLog.incident_id,
-            senderId: newLog.sender_id,
-            senderName: newLog.sender_name,
-            senderRole: newLog.sender_role,
-            recipient: newLog.recipient,
-            message: newLog.message,
-            type: newLog.type,
-            isCritical: newLog.is_critical,
-            timestamp: newLog.timestamp
-          }]);
+          setChatMessages(prev => {
+            if (prev.some(m => m.id === newLog.id)) return prev;
+            return [...prev, {
+              id: newLog.id,
+              incidentId: newLog.incident_id,
+              senderId: newLog.sender_id,
+              senderName: newLog.sender_name,
+              senderRole: newLog.sender_role,
+              recipient: newLog.recipient,
+              message: newLog.message,
+              type: newLog.type,
+              isCritical: newLog.is_critical,
+              timestamp: newLog.timestamp
+            }];
+          });
         }
       });
-      return () => sub.unsubscribe();
+
+      const interval = setInterval(fetchLogs, 3000);
+
+      return () => {
+        sub.unsubscribe();
+        clearInterval(interval);
+      };
     }
-  }, [activeIncidentId, panicStep]);
+  }, [activeIncidentId, myActiveIncident?.id, panicStep]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -617,95 +631,91 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
               </div>
             </div>
             {isCallActive && (
-              <div className="fixed inset-0 z-[150] bg-slate-900/98 backdrop-blur-2xl flex items-center justify-center p-6 animate-in zoom-in-95 duration-500">
-                <div className="w-full max-w-lg bg-white rounded-[4rem] p-12 shadow-2xl text-center relative overflow-hidden border border-white/20">
-                  <div className="absolute top-0 left-0 right-0 h-2 bg-red-600 animate-pulse"></div>
+              <div className="fixed inset-0 z-[150] bg-slate-900/98 backdrop-blur-2xl flex items-center justify-center p-4 md:p-6 animate-in zoom-in-95 duration-500">
+                <div className="w-full max-w-lg bg-white rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl relative flex flex-col max-h-[92vh] border border-slate-100 overflow-hidden">
                   
-                  <div className="flex flex-col items-center mb-10">
-                    <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-6 relative">
-                      <div className="absolute inset-0 bg-red-600/20 rounded-full animate-ping"></div>
-                      <PhoneCall className="w-8 h-8 relative z-10" />
+                  {/* Top Accent Line */}
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-red-600 animate-pulse z-10"></div>
+                  
+                  {/* Fixed Header */}
+                  <div className="pt-8 pb-4 px-6 md:px-10 border-b border-slate-100 shrink-0 text-center flex flex-col items-center">
+                    <div className="w-14 h-14 md:w-16 md:h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-3 relative">
+                      <div className="absolute inset-0 bg-red-600/10 rounded-full animate-ping"></div>
+                      <PhoneCall className="w-6 h-6 md:w-7 md:h-7 relative z-10" />
                     </div>
-                    <h3 className="text-3xl font-black text-slate-900 uppercase font-corporate tracking-tighter leading-none">Linha Prioritária SSM</h3>
-                    <div className={`mt-4 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border transition-all ${webrtcState.remoteStream ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100 animate-pulse'}`}>
-                      <div className={`w-2 h-2 rounded-full ${webrtcState.remoteStream ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase font-corporate tracking-tighter leading-none">Linha Prioritária</h3>
+                    <div className={`mt-2.5 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border transition-all ${webrtcState.remoteStream ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100 animate-pulse'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${webrtcState.remoteStream ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
                       {webrtcState.remoteStream ? `Chamada Estabelecida • ${formatDuration(callDuration)}` : 'Aguardando Operador...'}
                     </div>
                   </div>
 
-                  {(webrtcState.remoteStream || webrtcState.localStream) && (
-                    <div className="relative w-full aspect-video bg-slate-950 rounded-[2.5rem] overflow-hidden mb-10 border-4 border-slate-50 shadow-2xl group transition-all">
-                      {webrtcState.remoteStream ? (
-                        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center animate-spin mb-4">
-                            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
-                          </div>
-                          <p className="text-[10px] font-black text-white uppercase tracking-widest opacity-40">Encriptando Canal...</p>
-                        </div>
-                      )}
-                      {webrtcState.localStream && (
-                        <div className="absolute bottom-5 right-5 w-32 aspect-video bg-slate-900 rounded-2xl overflow-hidden border-2 border-white/20 shadow-lg group-hover:scale-110 transition-transform">
-                          <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mb-10">
-                    <p className="text-base font-bold text-slate-500 leading-relaxed px-6">
-                      O Centro de Coordenação está a validar a sua posição GPS e a triagem inicial para despacho imediato.
-                    </p>
-                  </div>
-                  
-                      {/* Chat Integrado para Persistência */}
-                      <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 text-left mb-8">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                          <MessageSquare className="w-3 h-3" /> Chat de Emergência
-                        </p>
-                        <div className="h-40 overflow-y-auto mb-6 custom-scrollbar pr-2 space-y-4">
-                          {chatMessages.length === 0 && <p className="text-[10px] font-bold text-slate-400 text-center py-4 uppercase">Sem mensagens ainda</p>}
-                          {chatMessages.map(m => (
-                            <div key={m.id} className={`flex flex-col ${m.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
-                              <span className="text-[8px] font-black uppercase text-slate-400 mb-1 px-1">{m.senderName}</span>
-                              <div className={`p-3 rounded-2xl text-[11px] font-bold leading-relaxed shadow-sm ${m.senderId === currentUser.id ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
-                                {m.message}
-                              </div>
+                  {/* Scrollable Content */}
+                  <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 md:space-y-8 custom-scrollbar text-center">
+                    {(webrtcState.remoteStream || webrtcState.localStream) && (
+                      <div className="relative w-full aspect-video bg-slate-950 rounded-2xl md:rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-xl group transition-all">
+                        {webrtcState.remoteStream ? (
+                          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center animate-spin mb-3">
+                              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full"></div>
                             </div>
-                          ))}
-                        </div>
-                        <div className="flex gap-3">
-                          <input 
-                            type="text" 
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Escreva uma mensagem..."
-                            className="flex-1 bg-white border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          />
-                          <button onClick={() => handleSendMessage()} className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl shadow-lg transition-all active:scale-90">
-                            <Send className="w-5 h-5" />
-                          </button>
-                        </div>
+                            <p className="text-[9px] font-black text-white uppercase tracking-widest opacity-40">Encriptando Canal...</p>
+                          </div>
+                        )}
+                        {webrtcState.localStream && (
+                          <div className="absolute bottom-3 right-3 w-24 md:w-32 aspect-video bg-slate-900 rounded-xl overflow-hidden border border-white/20 shadow-lg group-hover:scale-105 transition-transform">
+                            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror pointer-events-none" />
+                          </div>
+                        )}
                       </div>
+                    )}
 
-                      <div className="flex flex-col gap-4 mb-8">
-                        <button 
-                          onClick={() => {
-                            const id = activeIncidentId || myActiveIncident?.id;
-                            if (id) onOpenChat(id);
-                            else alert("Nenhuma emergência ativa encontrada.");
-                          }}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3"
-                        >
-                          <MessageSquare className="w-5 h-5" /> Abrir Chat de Coordenação
+                    <div className="px-4">
+                      <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                        O Centro de Coordenação está a validar a sua posição GPS e a triagem inicial para despacho imediato.
+                      </p>
+                    </div>
+                    
+                    {/* Chat Integrado para Persistência */}
+                    <div className="bg-slate-50 rounded-[2rem] p-5 md:p-6 border border-slate-100 text-left">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <MessageSquare className="w-3 h-3 text-blue-600" /> Chat de Emergência
+                      </p>
+                      <div className="h-36 overflow-y-auto mb-4 custom-scrollbar pr-2 space-y-3">
+                        {chatMessages.length === 0 && <p className="text-[9px] font-bold text-slate-400 text-center py-4 uppercase">Sem mensagens ainda</p>}
+                        {chatMessages.map(m => (
+                          <div key={m.id} className={`flex flex-col ${m.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                            <span className="text-[7px] font-black uppercase text-slate-400 mb-0.5 px-1">{m.senderName}</span>
+                            <div className={`p-2.5 rounded-xl text-[10px] font-bold leading-relaxed shadow-sm ${m.senderId === currentUser.id ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
+                              {m.message}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Escreva uma mensagem..."
+                          className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        />
+                        <button onClick={() => handleSendMessage()} className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg transition-all active:scale-90 flex items-center justify-center">
+                          <Send className="w-4 h-4" />
                         </button>
                       </div>
+                    </div>
+                  </div>
 
-                      <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-7 rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
-                        <Phone className="w-5 h-5" /> Encerrar Chamada
-                      </button>
+                  {/* Fixed Footer */}
+                  <div className="p-6 md:p-8 border-t border-slate-100 shrink-0 bg-white">
+                    <button onClick={handleEndCall} className="w-full bg-slate-950 hover:bg-red-600 text-white py-4 md:py-5 rounded-[1.5rem] font-black uppercase text-[10px] md:text-xs tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+                      <Phone className="w-4 h-4 md:w-5 md:h-5" /> Encerrar Chamada
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

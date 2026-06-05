@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import EmergencyCommunication from './components/EmergencyCommunication';
 import { COMPANIES as INITIAL_COMPANIES, ADMINS, AMBULANCES as INITIAL_AMBULANCES, EMPLOYEES as INITIAL_EMPLOYEES, RESOURCES as INITIAL_RESOURCES } from './constants';
-import { auditLogger } from './services/auditLogger';
+import { auditLogger, AuditActionType } from './services/auditLogger';
 import { supabase } from './services/supabase';
 import { dbService } from './services/dbService';
 import { WebRTCService } from './services/webRTCService';
@@ -657,10 +657,13 @@ const App: React.FC = () => {
     return employees;
   }, [employees, currentUser]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async (action: AuditActionType = 'LOGOUT_MANUAL') => {
     try {
       if (currentUser) {
-        auditLogger.log(currentUser, 'LOGOUT_MANUAL', undefined, 'Utilizador terminou sessão manualmente.');
+        const details = action === 'LOGOUT_SESSION_EXPIRED'
+          ? 'Sessão expirada por inatividade de 1 hora.'
+          : 'Utilizador terminou sessão manualmente.';
+        auditLogger.log(currentUser, action, undefined, details);
       }
     } catch (err) {
       console.error("Erro ao fazer log de auditoria:", err);
@@ -682,7 +685,41 @@ const App: React.FC = () => {
     supabase.auth.signOut({ scope: 'local' }).catch(err => {
       console.error("Erro ao terminar sessão no Supabase:", err);
     });
-  };
+  }, [currentUser]);
+
+  // Inactivity timeout: 1 hour (3600000 ms)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log("Inatividade detetada por 1 hora. Terminando sessão...");
+        handleLogout('LOGOUT_SESSION_EXPIRED');
+      }, 3600000); // 1 hora (3600000 ms)
+    };
+
+    // Events that count as activity
+    const activityEvents = ['mousemove', 'keydown', 'mousedown', 'scroll', 'touchstart', 'click'];
+
+    // Register event listeners
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Initialize the timer
+    resetTimer();
+
+    // Cleanup listeners and timeout on unmount or user change
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [currentUser, handleLogout]);
 
   // RENDER LOGIC
   const renderContent = () => {

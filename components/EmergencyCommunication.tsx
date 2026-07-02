@@ -419,7 +419,23 @@ const EmergencyCommunication: React.FC<EmergencyCommunicationProps> = ({
       {/* Conteúdo Dinâmico */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-[350px] max-h-[450px] bg-[#FAFBFE] custom-scrollbar relative">
         {activeTab === 'chat' ? (
-          logs.map(log => (
+          logs.filter(log => {
+            if (log.type === 'SIGNAL_HANGUP') return false;
+            if (activeChannel === 'CLIENTE') {
+              return log.recipient === 'CLIENTE' || log.recipient === 'Coordenação Central' || 
+                     ['COLABORADOR_RH', 'ADMIN_CLIENTE', 'RESPONSAVEL_EMERG_CLIENTE'].includes(log.senderRole || '');
+            }
+            if (activeChannel === 'AMBULANCIA') {
+              return log.recipient === 'AMBULANCIA' || log.senderRole === 'MOTORISTA_AMB';
+            }
+            if (activeChannel === 'EXTERNAL') {
+              return log.recipient === 'EXTERNAL';
+            }
+            if (activeChannel === 'STAKEHOLDER') {
+              return log.recipient === 'STAKEHOLDER';
+            }
+            return true;
+          }).map(log => (
             <div key={log.id} className={`flex gap-3 ${log.senderId === currentUser?.id ? 'flex-row-reverse' : 'flex-row'} animate-in slide-in-from-bottom-2`}>
               <div className={`flex flex-col max-w-[80%] ${log.senderId === currentUser?.id ? 'items-end' : 'items-start'}`}>
                 {log.senderId !== currentUser?.id && <span className="text-[10px] font-black text-slate-900 mb-1 ml-1">{log.senderName}</span>}

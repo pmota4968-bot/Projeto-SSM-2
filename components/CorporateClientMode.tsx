@@ -114,6 +114,20 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
   }, [webrtcState.incomingCall]);
 
   useEffect(() => {
+    if (myActiveIncident) {
+      if (myActiveIncident.status === 'resolved') {
+        setPanicStep('idle');
+      } else if (myActiveIncident.ambulanceId) {
+        setPanicStep('tracking');
+      } else if (panicStep === 'idle') {
+        setPanicStep('waiting_dispatch');
+      }
+    } else if (panicStep !== 'idle' && panicStep !== 'confirming' && panicStep !== 'activating') {
+      setPanicStep('idle');
+    }
+  }, [myActiveIncident]);
+
+  useEffect(() => {
     if (webrtcState.remoteStream) {
       setIsCallActive(true);
       if (!callTimerRef.current) {
@@ -390,104 +404,179 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     <div className="flex-1 bg-[#F8FAFC] p-8 custom-scrollbar overflow-y-auto h-full relative text-slate-900">
       <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
 
-        {panicStep === 'tracking' ? (
-          /* VISTA DE RASTREIO ATIVO */
+        {['active', 'waiting_dispatch', 'tracking'].includes(panicStep) ? (
+          /* VISTA DE EMERGÊNCIA ATIVA */
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight font-corporate uppercase flex items-center gap-3">
-                  Apoio em Caminho <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse"></div>
+                  {panicStep === 'tracking' ? 'Apoio em Caminho' : panicStep === 'active' ? 'Chamada de Emergência Ativa' : 'Aguardando Despacho'}
+                  <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse"></div>
                 </h2>
                 <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">
-                  Viatura {myActiveIncident?.ambulanceId || ''} Despachada • Monitorização GPS Activa
+                  {panicStep === 'tracking' 
+                    ? `Viatura ${myActiveIncident?.ambulanceId || ''} Despachada • Monitorização GPS Activa`
+                    : `Incidente: ${myActiveIncident?.id || activeIncidentId || ''} • Canal de Comunicação Estabelecido`}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[600px]">
-              <div className="lg:col-span-8 bg-white rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden">
-                <div ref={mapContainerRef} className="absolute inset-0 z-0" />
-                <div className="absolute top-6 left-6 z-10 bg-white/95 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-xl pointer-events-none">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Truck className="w-6 h-6" /></div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[600px]">
+              {/* Left Side: Map or Calling/Radar view */}
+              <div className="lg:col-span-8 bg-white rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden flex flex-col items-center justify-center p-8">
+                {panicStep === 'tracking' ? (
+                  <>
+                    <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+                    <div className="absolute top-6 left-6 z-10 bg-white/95 backdrop-blur-sm p-5 rounded-2xl border border-slate-100 shadow-xl pointer-events-none">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white shadow-lg"><Truck className="w-6 h-6" /></div>
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Unidade Assignada</p>
+                          <p className="text-sm font-black text-slate-900 leading-none">
+                            {myActiveIncident?.ambulanceId || 'Em Trânsito'} 
+                            {myActiveIncident?.ambulanceState?.type ? ` (${myActiveIncident.ambulanceState.type})` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center space-y-8 max-w-md w-full">
+                    {/* Call Status Card inside left panel */}
+                    <div className="w-24 h-24 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto relative shadow-lg">
+                      <div className="absolute inset-0 bg-red-600/10 rounded-full animate-ping"></div>
+                      <Phone className="w-10 h-10 animate-bounce" />
+                    </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Unidade Assignada</p>
-                      <p className="text-sm font-black text-slate-900 leading-none">
-                        {myActiveIncident?.ambulanceId || 'Em Trânsito'} 
-                        {myActiveIncident?.ambulanceState?.type ? ` (${myActiveIncident.ambulanceState.type})` : ''}
+                      <h4 className="text-xl font-black text-slate-900 uppercase font-corporate tracking-tighter">
+                        {isCallActive ? `Ligado à Central (${formatDuration(callDuration)})` : 'A contactar Coordenação Central...'}
+                      </h4>
+                      <p className="text-sm font-medium text-slate-400 mt-2">
+                        {isCallActive 
+                          ? 'Fale com o operador para realizar a triagem do paciente.' 
+                          : 'A estabelecer canal áudio/vídeo WebRTC seguro com o Centro SSM.'}
                       </p>
                     </div>
+
+                    {/* WebRTC Video Display integrated into panel */}
+                    {(webrtcState.remoteStream || webrtcState.localStream) && (
+                      <div className="relative w-full aspect-video bg-slate-950 rounded-[2rem] overflow-hidden border-2 border-slate-100 shadow-xl group transition-all">
+                        {webrtcState.remoteStream ? (
+                          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center animate-spin mb-3">
+                              <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full"></div>
+                            </div>
+                            <p className="text-[9px] font-black text-white uppercase tracking-widest opacity-40">Encriptando Canal...</p>
+                          </div>
+                        )}
+                        {webrtcState.localStream && (
+                          <div className="absolute bottom-3 right-3 w-24 md:w-32 aspect-video bg-slate-900 rounded-xl overflow-hidden border border-white/20 shadow-lg group-hover:scale-105 transition-transform">
+                            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover mirror pointer-events-none" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2 pt-4">
+                      {isCallActive ? (
+                        <button onClick={handleEndCall} className="bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95">
+                          <Phone className="w-4 h-4" /> Desligar Chamada
+                        </button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => {
+                              webrtcService.current?.startCall(`ssm-central-MAIN`, false);
+                            }}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                          >
+                            <Phone className="w-4 h-4" /> Ligar Novamente
+                          </button>
+                          <button 
+                            onClick={() => setPanicStep('waiting_dispatch')}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-95"
+                          >
+                            Prosseguir para Chat
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              <div className="lg:col-span-4 space-y-6 flex flex-col">
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex-1">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">EQUIPA EM RESPOSTA</h4>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
-                      {myActiveIncident?.ambulanceState?.driverName?.substring(0, 2).toUpperCase() || 'M'}
+              {/* Right Side: Chat & Status widgets */}
+              <div className="lg:col-span-4 space-y-6 flex flex-col h-full">
+                {panicStep === 'tracking' && myActiveIncident?.ambulanceState ? (
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">EQUIPA EM RESPOSTA</h4>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
+                        {myActiveIncident.ambulanceState.driverName?.substring(0, 2).toUpperCase() || 'M'}
+                      </div>
+                      <div>
+                        <h5 className="text-lg font-black text-slate-900">{myActiveIncident.ambulanceState.driverName || 'Motorista de Plantão'}</h5>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Placa: {myActiveIncident.ambulanceState.plate || '---'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h5 className="text-lg font-black text-slate-900">{myActiveIncident?.ambulanceState?.driverName || 'Motorista de Plantão'}</h5>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Placa: {myActiveIncident?.ambulanceState?.plate || '---'}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => {
-                        const id = myActiveIncident?.id || activeIncidentId;
-                        if (id) onOpenChat(id);
-                        else alert("Nenhuma emergência ativa encontrada.");
-                      }}
-                      className="w-full bg-[#E0F2FE] text-slate-900 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-slate-100 border border-blue-100 shadow-sm active:scale-95"
-                    >
-                      <MessageSquare className="w-5 h-5 text-blue-600" /> Chat com a Coordenação
-                    </button>
-                    <div className="bg-[#EBFDF5] text-[#065F46] px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 border border-[#D1FAE5]">
+                    <div className="bg-[#EBFDF5] text-[#065F46] px-4 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest flex items-center gap-3 border border-[#D1FAE5] mt-4">
                       <ShieldCheck className="w-4 h-4" /> Rede Primária de Resposta Validada
                     </div>
                   </div>
+                ) : (
+                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">ESTADO DA OCORRÊNCIA</h4>
+                    <div className="flex items-center gap-3 bg-[#FFF7ED] text-[#9A3412] px-5 py-4 rounded-2xl border border-[#FED7AA]">
+                      <AlertTriangle className="w-5 h-5 shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase leading-none">Triagem em Progresso</p>
+                        <p className="text-[9px] font-bold opacity-80 mt-1">Coordenação Central a processar incidente de pânico.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                  {/* Chat Integrado para Persistência no Rastreio */}
-                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex-1 flex flex-col min-h-[300px]">
-                    <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <MessageSquare className="w-3 h-3 text-blue-600" /> Comunicação em Tempo Real
-                    </h4>
-                    <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar pr-1 space-y-3">
-                      {chatMessages.length === 0 && <p className="text-[9px] font-bold text-slate-400 text-center py-8 uppercase tracking-widest">Sem mensagens no chat</p>}
-                      {chatMessages.map(m => (
-                        <div key={m.id} className={`flex flex-col ${m.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
-                          <span className="text-[7px] font-black uppercase text-slate-400 mb-0.5 px-1">{m.senderName}</span>
-                          <div className={`p-3 rounded-xl text-[10px] font-bold leading-relaxed shadow-sm ${m.senderId === currentUser.id ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
-                            {m.message}
-                          </div>
+                {/* Integrated Chat Box */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[300px]">
+                  <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <MessageSquare className="w-3 h-3 text-blue-600" /> Comunicação em Tempo Real
+                  </h4>
+                  <div className="flex-1 overflow-y-auto mb-4 custom-scrollbar pr-1 space-y-3 max-h-[300px]">
+                    {chatMessages.length === 0 && <p className="text-[9px] font-bold text-slate-400 text-center py-8 uppercase tracking-widest">Sem mensagens no chat</p>}
+                    {chatMessages.filter(m => m.type !== 'SIGNAL_HANGUP').map(m => (
+                      <div key={m.id} className={`flex flex-col ${m.senderId === currentUser.id ? 'items-end' : 'items-start'}`}>
+                        <span className="text-[7px] font-black uppercase text-slate-400 mb-0.5 px-1">{m.senderName}</span>
+                        <div className={`p-3 rounded-xl text-[10px] font-bold leading-relaxed shadow-sm ${m.senderId === currentUser.id ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'}`}>
+                          {m.message}
                         </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Mensagem..."
-                        className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      />
-                      <button onClick={() => handleSendMessage()} className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg transition-all active:scale-90">
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </div>
+                      </div>
+                    ))}
                   </div>
+                  <form onSubmit={handleSendMessage} className="flex gap-2 border-t border-slate-100 pt-4">
+                    <input 
+                      type="text" 
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Mensagem..."
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[10px] font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                    />
+                    <button type="submit" disabled={isSending} className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl shadow-lg transition-all active:scale-90 disabled:opacity-50">
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
                 </div>
 
-                <div className="bg-blue-600 text-white p-8 rounded-[2rem] shadow-xl shadow-blue-600/20">
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Chegada Prevista</p>
-                  <div className="flex items-baseline gap-2">
-                    <h4 className="text-6xl font-black tracking-tighter">{eta}</h4>
-                    <span className="text-lg font-bold uppercase tracking-widest">Minutos</span>
+                {panicStep === 'tracking' && (
+                  <div className="bg-blue-600 text-white p-8 rounded-[2rem] shadow-xl shadow-blue-600/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Chegada Prevista</p>
+                    <div className="flex items-baseline gap-2">
+                      <h4 className="text-6xl font-black tracking-tighter">{eta}</h4>
+                      <span className="text-lg font-bold uppercase tracking-widest">Minutos</span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

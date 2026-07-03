@@ -117,15 +117,16 @@ const CorporateClientMode: React.FC<CorporateClientModeProps> = ({
     if (myActiveIncident) {
       if (myActiveIncident.status === 'resolved') {
         setPanicStep('idle');
-      } else if (myActiveIncident.ambulanceId) {
+        setActiveIncidentId(null);
+      } else if (activeIncidentId && myActiveIncident.ambulanceId) {
         setPanicStep('tracking');
-      } else if (panicStep === 'idle') {
+      } else if (activeIncidentId && panicStep === 'idle') {
         setPanicStep('waiting_dispatch');
       }
     } else if (panicStep !== 'idle' && panicStep !== 'confirming' && panicStep !== 'activating') {
       setPanicStep('idle');
     }
-  }, [myActiveIncident]);
+  }, [myActiveIncident, activeIncidentId]);
 
   useEffect(() => {
     if (webrtcState.remoteStream) {
